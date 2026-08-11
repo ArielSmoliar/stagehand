@@ -1,8 +1,12 @@
 # Stagehand
 
-**A Gemini-powered virtual-production incident supervisor for LED-volume stages.**
+**A Gemini-powered incident supervisor for virtual-production stages with large LED walls.**
 
 ![Stagehand supervising an LED-volume production incident from the virtual-production control surface](docs/assets/stagehand-hero.png)
+
+An **LED volume** is a film-production stage surrounded by large LED displays that show
+a real-time virtual environment in camera, replacing much of the work traditionally done
+with a green screen.
 
 Stagehand helps a virtual-production supervisor answer four questions during a take:
 
