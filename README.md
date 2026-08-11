@@ -2,6 +2,8 @@
 
 **A Gemini-powered virtual-production incident supervisor for LED-volume stages.**
 
+![Stagehand supervising an LED-volume production incident from the virtual-production control surface](docs/assets/stagehand-hero.png)
+
 Stagehand helps a virtual-production supervisor answer four questions during a take:
 
 1. What changed?
