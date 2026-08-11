@@ -1,0 +1,15 @@
+{
+  "eval_cases": [
+    {
+      "eval_case_id": "approved_failover_stable",
+      "prompt": {
+        "role": "user",
+        "parts": [
+          {
+            "text": "Investigate incident inc-1042 for volume-a, scene-24, take-07. The trusted Stagehand snapshot is: {\"stage_id\":\"volume-a\",\"scene_id\":\"scene-24\",\"take_id\":\"take-07\",\"incident_id\":\"inc-1042\",\"state\":\"STABLE\",\"frame_time_ms\":{\"render-1\":12.3,\"render-2\":12.5,\"render-3\":0.0},\"gpu_memory_ratio\":{\"render-1\":0.61,\"render-2\":0.63,\"render-3\":0.0},\"led_sync_offset_ms\":2.6,\"tracking_latency_ms\":3.1,\"network_latency_ms\":1.9,\"render_pool\":{\"render-1\":true,\"render-2\":true,\"render-3\":false},\"allocation_failures_total\":3,\"approved_incident_id\":\"inc-1042\",\"approved_by\":\"Ariel Smoliar\"}. Authoritative action status: the incident-bound simulated failover was explicitly approved by Ariel Smoliar and executed. Do not request approval or recommend the failover again. Never call it automatic. Treat render-3 remaining outside the active pool as the intended safe state. Query Grafana with PromQL {__name__=~\"stage_render_frame_time_ms|stage_gpu_memory_utilization_ratio|stage_gpu_allocation_failures_total|stage_led_sync_offset_ms|stage_tracking_latency_ms|stage_network_latency_ms|stage_render_pool_member\",incident_id=\"inc-1042\"} and LogQL {service_name=\"stagehand\"} |= \"inc-1042\". Report whether recovery is verified and whether any further remediation is recommended."
+          }
+        ]
+      }
+    }
+  ]
+}

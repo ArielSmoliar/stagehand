@@ -26,10 +26,26 @@ def build_investigation_prompt(snapshot: StageSnapshot) -> str:
         f'incident_id="{snapshot.incident_id}"}}'
     )
     logql = f'{{service_name="stagehand"}} |= "{snapshot.incident_id}"'
+    action_status = (
+        "The incident-bound simulated failover has already been explicitly "
+        f"approved by {snapshot.approved_by} and executed. Do not request approval "
+        "or recommend the failover again. Never call it automatic. Treat render-3 "
+        "remaining outside the active pool as the intended safe state. If the state "
+        "is STABLE, report that recovery is verified and no further remediation is "
+        "recommended."
+        if snapshot.approved_incident_id == snapshot.incident_id
+        else (
+            "No failover approval is recorded. The incident-bound simulated failover "
+            "may be recommended only subject to explicit human approval; do not claim "
+            "that it has executed."
+        )
+    )
     return f"""
 Investigate incident {snapshot.incident_id} for {snapshot.stage_id},
 {snapshot.scene_id}, {snapshot.take_id}. The trusted Stagehand snapshot is:
 {snapshot.model_dump_json()}
+
+Authoritative action status: {action_status}
 
 Query Grafana using these exact expressions rather than inventing metric names:
 - PromQL: {promql}
@@ -42,9 +58,9 @@ evidence and continue from the trusted snapshot; never infer a node crash or
 telemetry-agent failure from an empty query.
 
 Determine why render-3 exceeded the 16.7 ms frame budget and LED synchronization
-offset exceeded 8 ms. Check tracking and network counter-evidence. Recommend only
-the incident-bound simulated render-node failover, subject to explicit human
-approval. Never recommend a restart and never execute remediation.
+offset exceeded 8 ms. Check tracking and network counter-evidence. Follow the
+authoritative action status above. Never recommend a restart and never execute
+remediation.
 """.strip()
 
 

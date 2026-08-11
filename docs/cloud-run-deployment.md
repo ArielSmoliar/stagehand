@@ -9,6 +9,22 @@ Do not put credentials in `.env`, deploy flags, Terraform variables, source file
 GitHub Actions variables. Do not make the service public until the authenticated
 deployment has passed the verification steps below.
 
+## Verified deployment
+
+The authenticated deployment passed this runbook on August 11, 2026:
+
+- Project: `stagehand-agentic-cinema`
+- Region: `us-east1`
+- Service: `stagehand`
+- Verified revision: `stagehand-00005-2sf`
+- Runtime identity: `stagehand-app@stagehand-agentic-cinema.iam.gserviceaccount.com`
+- Traffic: 100% to the verified revision
+
+The hosted flow produced the expected `SYNC_DRIFT`, required explicit incident-bound
+approval, isolated `render-3`, reached `STABLE` after 15 seconds, and produced a final
+Gemini report grounded in Grafana evidence with no repeated remediation recommendation.
+The service remains private; judge access is still a separate decision.
+
 ## 1. Select the Google Cloud project
 
 Choose a dedicated hackathon project rather than an unrelated production project.

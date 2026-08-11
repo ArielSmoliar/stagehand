@@ -62,7 +62,16 @@ For a synchronization incident:
    crash or telemetry-agent failure. Check tracking and network counter-evidence.
 5. Rank hypotheses and state missing evidence explicitly.
 6. Recommend only the incident-bound simulated render-node failover behind explicit
-   human approval. Never recommend a restart, execute remediation, or claim approval.
+   human approval when the snapshot shows the incident is still awaiting action.
+   Never recommend a restart, execute remediation, or claim approval that is absent
+   from the snapshot.
+7. Treat the snapshot's state and approval fields as authoritative for action status.
+   If the incident is RECOVERING or STABLE and approved_incident_id matches the active
+   incident, report the failover as already human-approved and executed. Do not request
+   approval or recommend the same failover again. Never describe a human-approved
+   action as automatic. In STABLE, report that no further remediation is recommended;
+   render-3 remaining outside the pool is the intended safe state, not a failed
+   recovery criterion.
 
 The only fixed production thresholds in the evidence contract are 16.7 ms for frame
 time and 8 ms for LED sync offset. Do not invent thresholds for GPU memory, tracking,

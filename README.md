@@ -25,7 +25,9 @@ incident-scoped recommendation.
 > Hackathon**, in the Grafana partner track. The deterministic simulator and local
 > API foundation, Grafana Cloud OTLP export, and read-back through the official
 > Grafana MCP, the local supervisor console, and the incident-bound simulated
-> failover/recovery loop work today. Hosted deployment remains milestone work.
+> failover/recovery loop work today. The complete application is deployed as an
+> authenticated Cloud Run service and the hosted investigation, approval, and
+> recovery path has been verified against live Grafana evidence.
 
 ## Why Stagehand
 
@@ -107,7 +109,7 @@ This is not a fixed report generator. Gemini dynamically invokes the official Gr
 MCP tools, interprets their live responses, identifies missing evidence, and decides
 whether the evidence supports holding or continuing the take. Google ADK supplies the
 agent definition, session and runner lifecycle, MCP tool integration, and streamed
-events. Cloud Run is the planned public runtime for the combined FastAPI and ADK app.
+events. Cloud Run is the hosted runtime for the combined FastAPI and ADK app.
 
 ## Current status
 
@@ -117,24 +119,29 @@ events. Cloud Run is the planned public runtime for the combined FastAPI and ADK
 | Prometheus-compatible virtual-stage metrics | Working |
 | Correlated incident log endpoint | Working |
 | FastAPI health, scenario, state, metrics, logs, and SSE routes | Working |
-| Google ADK Stagehand agent | Working locally |
+| Google ADK Stagehand agent | Working locally and on Cloud Run |
 | Read-only `mcp-grafana` subprocess connection | Live connection verified |
-| Automated unit/API suite | 15 passing tests |
+| Automated unit/API suite | 19 passing tests |
 | Live Gemini diagnosis through Grafana MCP | Verified with a bounded tool trajectory |
 | OTLP metrics and log exporter for Grafana Cloud | Live ingestion verified |
 | Prometheus and Loki read-back through official Grafana MCP | Live queries verified |
-| Cloud Run deployment | Scaffolded, not deployed |
-| Virtual-production supervisor console | Working locally |
-| Incident-bound human approval | Working; stale and duplicate approvals rejected |
-| Simulated failover and 15-second recovery verification | Working locally |
+| Cloud Run deployment | Private revision deployed and serving 100% of traffic |
+| Virtual-production supervisor console | Working locally and on Cloud Run |
+| Incident-bound human approval | Hosted flow verified; stale and duplicate approvals rejected |
+| Simulated failover and 15-second recovery verification | Hosted flow verified |
 
-The August 11 live agent smoke test used Gemini 3.6 Flash through Google ADK. Gemini
-issued one combined Prometheus query for the incident metrics, queried Loki within the
-three-call investigation budget, evaluated tracking and network counter-evidence, and
-returned an incident-scoped recommendation without executing remediation. The focused
-Vertex evaluation case is prepared in `tests/eval`; grading requires Google Cloud
-Application Default Credentials and is intentionally kept separate from API-key-only
-local development.
+The August 11 hosted smoke test used Gemini through Google ADK. Gemini issued the
+bounded Prometheus and Loki queries, evaluated tracking and network counter-evidence,
+and returned an incident-scoped recommendation without executing remediation. After
+explicit human approval, Stagehand isolated `render-3`, reached `STABLE` after 15
+seconds, and Gemini correctly reported the action as already approved and executed
+with no further remediation recommended.
+
+The focused evaluation cases live in `tests/eval`. `agents-cli 0.5.0` currently fails
+before inference when converting ADK's `McpToolset` into its evaluation agent format;
+the deployed SSE investigation is therefore the behavioral verification path for the
+live MCP integration, while deterministic prompt and control-boundary behavior remains
+covered by pytest.
 
 ## Quick start
 
@@ -308,7 +315,7 @@ uv run pytest -q
 Expected current result:
 
 ```text
-11 passed, 4 skipped
+19 passed, 4 skipped
 ```
 
 The skipped tests require live Gemini or a running Stagehand service. Enable live
@@ -325,8 +332,9 @@ than brittle string-matching unit tests.
 
 ## Cloud Run deployment
 
-The repository includes Google Agents CLI Cloud Run scaffolding. Deployment is an
-explicit operator action and has not yet been performed. Follow the
+The repository includes Google Agents CLI Cloud Run scaffolding. The application is
+deployed privately in `stagehand-agentic-cinema` / `us-east1`; future deployments
+remain explicit operator actions. Follow the
 [Cloud Run deployment runbook](docs/cloud-run-deployment.md) for the least-privilege
 service account, Secret Manager bindings, dry run, and end-to-end verification gate.
 
@@ -345,13 +353,11 @@ the complete hosted flow has passed.
 
 ## Roadmap
 
-1. Push the first reproducible foundation checkpoint.
-2. Ingest the simulator metric and correlated log into Grafana Cloud.
-3. Verify Prometheus and Loki retrieval directly through Grafana MCP.
-4. Run repeated Gemini diagnosis evaluations when quota is available.
-5. Validate the supervisor console and live Gemini/Grafana investigation flow.
-6. Validate incident-bound approval, simulated failover, and 15-second recovery verification.
-7. Create the Grafana dashboard, alert, deployment, and three-minute demo.
+1. Decide and implement the judge-facing access model for the private Cloud Run service.
+2. Capture Grafana dashboard screenshots and the complete hosted recovery sequence.
+3. Work around or upgrade past the `agents-cli 0.5.0` MCP evaluation limitation.
+4. Run the Antigravity/Gemini review described in the handoff document.
+5. Record the three-minute demo and prepare the Devpost submission.
 
 ## Repository map
 
@@ -367,7 +373,7 @@ tests/
   unit/                Deterministic simulator and API tests
   integration/         Opt-in live agent and server tests
 deployment/             Google Agents CLI Cloud Run scaffolding
-docs/                   Implementation handoff and design constraints
+docs/                   Deployment runbook, design constraints, and Gemini handoff
 ```
 
 ## Hackathon compliance
