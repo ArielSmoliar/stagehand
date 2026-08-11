@@ -216,6 +216,22 @@ of 29 ms and GPU memory utilization of 0.98. A Loki query also returned the corr
 `render_node="render-3"`. Both checks were executed through the official, read-only
 `mcp-grafana` connection used by the agent.
 
+## Grafana dashboard
+
+Import [`docs/grafana/stagehand-virtual-production.json`](docs/grafana/stagehand-virtual-production.json)
+from **Dashboards → New → Import** in Grafana. Select the stack's Prometheus and Loki
+datasources when prompted. The dashboard provides the judge-facing operational view:
+
+- production frame-budget and LED-sync safety indicators;
+- GPU allocation failures and remaining render-pool capacity;
+- per-node frame time and GPU memory pressure;
+- tracking and network latency as counter-evidence; and
+- incident-scoped correlated Loki logs.
+
+Select `inc-1042` in the Incident filter after triggering GPU pressure. The dashboard
+is portable JSON so the submission remains reproducible without granting the runtime
+permission to create or modify dashboards.
+
 ## Agent safety boundary
 
 The Stagehand agent:

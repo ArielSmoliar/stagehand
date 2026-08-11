@@ -1,0 +1,113 @@
+{
+  "__inputs": [
+    {"name":"DS_PROMETHEUS","label":"Stagehand Prometheus","type":"datasource","pluginId":"prometheus","pluginName":"Prometheus"},
+    {"name":"DS_LOKI","label":"Stagehand Loki","type":"datasource","pluginId":"loki","pluginName":"Loki"}
+  ],
+  "annotations": {"list": []},
+  "description": "Judge-facing evidence board for Stagehand virtual-production incidents.",
+  "editable": true,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [],
+  "liveNow": true,
+  "panels": [
+    {
+      "datasource":{"type":"prometheus","uid":"${DS_PROMETHEUS}"},
+      "description":"60 fps requires frame time at or below 16.7 ms.",
+      "fieldConfig":{"defaults":{"color":{"mode":"thresholds"},"decimals":1,"thresholds":{"mode":"absolute","steps":[{"color":"green","value":null},{"color":"red","value":16.7}]},"unit":"ms"},"overrides":[]},
+      "gridPos":{"h":5,"w":6,"x":0,"y":0},
+      "id":1,
+      "options":{"colorMode":"background","graphMode":"area","justifyMode":"auto","orientation":"auto","reduceOptions":{"calcs":["lastNotNull"],"fields":"","values":false},"textMode":"auto","wideLayout":true},
+      "targets":[{"editorMode":"code","expr":"max(stage_render_frame_time_ms{incident_id=~\"$incident_id\"})","instant":true,"legendFormat":"Worst frame time","range":false,"refId":"A"}],
+      "title":"Production Frame Budget",
+      "type":"stat"
+    },
+    {
+      "datasource":{"type":"prometheus","uid":"${DS_PROMETHEUS}"},
+      "description":"Camera-to-wall offset above 8 ms is unsafe for the take.",
+      "fieldConfig":{"defaults":{"color":{"mode":"thresholds"},"decimals":1,"thresholds":{"mode":"absolute","steps":[{"color":"green","value":null},{"color":"red","value":8}]},"unit":"ms"},"overrides":[]},
+      "gridPos":{"h":5,"w":6,"x":6,"y":0},
+      "id":2,
+      "options":{"colorMode":"background","graphMode":"area","justifyMode":"auto","orientation":"auto","reduceOptions":{"calcs":["lastNotNull"],"fields":"","values":false},"textMode":"auto","wideLayout":true},
+      "targets":[{"editorMode":"code","expr":"max(stage_led_sync_offset_ms{incident_id=~\"$incident_id\"})","instant":true,"legendFormat":"LED sync offset","range":false,"refId":"A"}],
+      "title":"LED Sync Safety",
+      "type":"stat"
+    },
+    {
+      "datasource":{"type":"prometheus","uid":"${DS_PROMETHEUS}"},
+      "description":"Allocation failures correlate GPU pressure to render-3.",
+      "fieldConfig":{"defaults":{"color":{"mode":"thresholds"},"decimals":0,"thresholds":{"mode":"absolute","steps":[{"color":"green","value":null},{"color":"red","value":1}]}},"overrides":[]},
+      "gridPos":{"h":5,"w":6,"x":12,"y":0},
+      "id":3,
+      "options":{"colorMode":"background","graphMode":"area","justifyMode":"auto","orientation":"auto","reduceOptions":{"calcs":["lastNotNull"],"fields":"","values":false},"textMode":"auto","wideLayout":true},
+      "targets":[{"editorMode":"code","expr":"max(stage_gpu_allocation_failures_total{incident_id=~\"$incident_id\"})","instant":true,"legendFormat":"Allocation failures","range":false,"refId":"A"}],
+      "title":"GPU Allocation Failures",
+      "type":"stat"
+    },
+    {
+      "datasource":{"type":"prometheus","uid":"${DS_PROMETHEUS}"},
+      "description":"Render nodes currently available to production.",
+      "fieldConfig":{"defaults":{"color":{"mode":"thresholds"},"decimals":0,"max":3,"min":0,"thresholds":{"mode":"absolute","steps":[{"color":"red","value":null},{"color":"yellow","value":2},{"color":"green","value":3}]}},"overrides":[]},
+      "gridPos":{"h":5,"w":6,"x":18,"y":0},
+      "id":4,
+      "options":{"colorMode":"background","graphMode":"none","justifyMode":"auto","orientation":"auto","reduceOptions":{"calcs":["lastNotNull"],"fields":"","values":false},"textMode":"auto","wideLayout":true},
+      "targets":[{"editorMode":"code","expr":"sum(stage_render_pool_member{incident_id=~\"$incident_id\"})","instant":true,"legendFormat":"Active nodes","range":false,"refId":"A"}],
+      "title":"Render Pool",
+      "type":"stat"
+    },
+    {
+      "datasource":{"type":"prometheus","uid":"${DS_PROMETHEUS}"},
+      "fieldConfig":{"defaults":{"color":{"mode":"palette-classic"},"custom":{"drawStyle":"line","fillOpacity":12,"lineWidth":2,"showPoints":"never","thresholdsStyle":{"mode":"line"}},"thresholds":{"mode":"absolute","steps":[{"color":"green","value":null},{"color":"red","value":16.7}]},"unit":"ms"},"overrides":[]},
+      "gridPos":{"h":8,"w":12,"x":0,"y":5},
+      "id":5,
+      "options":{"legend":{"calcs":["lastNotNull","max"],"displayMode":"table","placement":"bottom","showLegend":true},"tooltip":{"mode":"multi","sort":"desc"}},
+      "targets":[{"editorMode":"code","expr":"stage_render_frame_time_ms{incident_id=~\"$incident_id\"}","legendFormat":"{{render_node}}","range":true,"refId":"A"}],
+      "title":"Frame Time by Render Node",
+      "type":"timeseries"
+    },
+    {
+      "datasource":{"type":"prometheus","uid":"${DS_PROMETHEUS}"},
+      "fieldConfig":{"defaults":{"color":{"mode":"palette-classic"},"custom":{"drawStyle":"line","fillOpacity":12,"lineWidth":2,"showPoints":"never","thresholdsStyle":{"mode":"line"}},"max":1,"min":0,"thresholds":{"mode":"absolute","steps":[{"color":"green","value":null},{"color":"red","value":0.9}]},"unit":"percentunit"},"overrides":[]},
+      "gridPos":{"h":8,"w":12,"x":12,"y":5},
+      "id":6,
+      "options":{"legend":{"calcs":["lastNotNull","max"],"displayMode":"table","placement":"bottom","showLegend":true},"tooltip":{"mode":"multi","sort":"desc"}},
+      "targets":[{"editorMode":"code","expr":"stage_gpu_memory_utilization_ratio{incident_id=~\"$incident_id\"}","legendFormat":"{{render_node}}","range":true,"refId":"A"}],
+      "title":"GPU Memory Pressure",
+      "type":"timeseries"
+    },
+    {
+      "datasource":{"type":"prometheus","uid":"${DS_PROMETHEUS}"},
+      "description":"Stable values provide counter-evidence against tracking or network causes.",
+      "fieldConfig":{"defaults":{"color":{"mode":"palette-classic"},"custom":{"drawStyle":"line","fillOpacity":8,"lineWidth":2,"showPoints":"never"},"unit":"ms"},"overrides":[]},
+      "gridPos":{"h":8,"w":12,"x":0,"y":13},
+      "id":7,
+      "options":{"legend":{"calcs":["lastNotNull"],"displayMode":"table","placement":"bottom","showLegend":true},"tooltip":{"mode":"multi","sort":"desc"}},
+      "targets":[
+        {"editorMode":"code","expr":"stage_tracking_latency_ms{incident_id=~\"$incident_id\"}","legendFormat":"Tracking latency","range":true,"refId":"A"},
+        {"editorMode":"code","expr":"stage_network_latency_ms{incident_id=~\"$incident_id\"}","legendFormat":"Network latency","range":true,"refId":"B"}
+      ],
+      "title":"Counter-Evidence: Tracking and Network",
+      "type":"timeseries"
+    },
+    {
+      "datasource":{"type":"loki","uid":"${DS_LOKI}"},
+      "description":"Incident-scoped production events correlated with stage telemetry.",
+      "gridPos":{"h":8,"w":12,"x":12,"y":13},
+      "id":8,
+      "options":{"dedupStrategy":"none","enableLogDetails":true,"prettifyLogMessage":true,"showLabels":true,"showTime":true,"sortOrder":"Descending","wrapLogMessage":true},
+      "targets":[{"editorMode":"code","expr":"{service_name=\"stagehand\", incident_id=~\"$incident_id\"}","queryType":"range","refId":"A"}],
+      "title":"Correlated Production Logs",
+      "type":"logs"
+    }
+  ],
+  "refresh":"5s",
+  "schemaVersion":41,
+  "tags":["stagehand","virtual-production","hackathon"],
+  "templating":{"list":[{"allValue":".+","current":{"text":"All","value":"$__all"},"datasource":{"type":"prometheus","uid":"${DS_PROMETHEUS}"},"definition":"label_values(stage_render_frame_time_ms, incident_id)","description":"Scope every panel to one production incident.","includeAll":true,"label":"Incident","multi":false,"name":"incident_id","options":[],"query":{"query":"label_values(stage_render_frame_time_ms, incident_id)","refId":"StandardVariableQuery"},"refresh":1,"regex":"","sort":1,"type":"query"}]},
+  "time":{"from":"now-30m","to":"now"},
+  "timepicker":{},
+  "timezone":"browser",
+  "title":"Stagehand — Virtual Production Supervisor",
+  "uid":"stagehand-vp-supervisor",
+  "version":1
+}
