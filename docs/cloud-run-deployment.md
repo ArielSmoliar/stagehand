@@ -32,17 +32,18 @@ agents-cli infra single-project --project "$STAGEHAND_PROJECT" --apply
 This provisions the least-privilege `stagehand-app` runtime service account and grants
 it access to Vertex AI, logging, tracing, and Secret Manager.
 
-## 2. Create secrets
+## 2. Add secret values
 
-Create the secret containers once:
+Terraform creates the two Secret Manager containers:
 
 ```bash
-gcloud secrets create stagehand-grafana-read-token --replication-policy=automatic
-gcloud secrets create stagehand-grafana-otlp-token --replication-policy=automatic
+stagehand-grafana-read-token
+stagehand-grafana-otlp-token
 ```
 
-Add each value without placing it in shell history. Run the command, paste the token,
-then press Control-D:
+Terraform intentionally does not manage secret versions, keeping credential values out
+of source control and Terraform state. Add each value without placing it in shell
+history. Run the command, paste the token, then press Control-D:
 
 ```bash
 gcloud secrets versions add stagehand-grafana-read-token --data-file=-
