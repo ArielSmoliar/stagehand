@@ -148,6 +148,7 @@ class StageSimulator:
             {
                 "severity": "ERROR",
                 "service": "render-node-3",
+                "render_node": "render-3",
                 "event": "gpu_allocation_failed",
                 "requested_mb": 512,
                 "available_mb": 96,

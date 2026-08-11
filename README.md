@@ -17,8 +17,9 @@ incident-scoped recommendation.
 
 > Stagehand is under active development for **Agentic Cinema: The Blockbuster
 > Hackathon**, in the Grafana partner track. The deterministic simulator and local
-> API foundation work today. Grafana Cloud ingestion, hosted deployment, the
-> supervisor console, and the approval/recovery loop remain milestone work.
+> API foundation and Grafana Cloud OTLP exporter work today. Live ingestion
+> verification, hosted deployment, the supervisor console, and the approval/recovery
+> loop remain milestone work.
 
 ## Why Stagehand
 
@@ -58,7 +59,7 @@ Supervisor console (planned)
 Cloud Run
   FastAPI application
   ├── deterministic stage simulator
-  ├── Prometheus-compatible /metrics
+  ├── Prometheus-compatible /metrics + OTLP exporter
   ├── incident and scenario API
   ├── Google ADK Runner
   └── mcp-grafana subprocess (stdio, read-only)
@@ -88,9 +89,9 @@ approve or execute remediation.
 | FastAPI health, scenario, state, metrics, logs, and SSE routes | Working |
 | Google ADK Stagehand agent | Working locally |
 | Read-only `mcp-grafana` subprocess connection | Live connection verified |
-| Automated unit/API suite | 7 passing tests |
+| Automated unit/API suite | 11 passing tests |
 | Live Gemini diagnosis | Blocked during latest check by API quota |
-| Metrics and logs ingested into Grafana Cloud | Next milestone |
+| OTLP metrics and log exporter for Grafana Cloud | Implemented; credentials needed for live verification |
 | Cloud Run deployment | Scaffolded, not deployed |
 | Supervisor console and approval/recovery loop | Planned |
 
@@ -121,7 +122,17 @@ GOOGLE_GENAI_USE_VERTEXAI=false
 GRAFANA_URL=https://your-instance.grafana.net
 GRAFANA_SERVICE_ACCOUNT_TOKEN=your-read-only-service-account-token
 MCP_GRAFANA_COMMAND=mcp-grafana
+GRAFANA_CLOUD_OTLP_ENDPOINT=https://otlp-gateway-your-region.grafana.net/otlp
+GRAFANA_CLOUD_OTLP_USERNAME=your-stack-instance-id
+GRAFANA_CLOUD_OTLP_TOKEN=your-write-only-access-policy-token
 ```
+
+The MCP service-account token is read-only and is used by the agent to investigate.
+The separate OTLP access-policy token is write-only and sends simulator metrics and
+logs. Copy the OTLP endpoint, instance ID, and token from the OpenTelemetry connection
+tile in Grafana Cloud. If those three values are absent, Stagehand remains fully usable
+locally and the exporter safely becomes a no-op. See Grafana's
+[OTLP ingestion documentation](https://grafana.com/docs/grafana-cloud/send-data/otlp/send-data-otlp/).
 
 Open `http://127.0.0.1:8000/docs` for the generated API documentation.
 
@@ -221,7 +232,7 @@ uv run pytest -q
 Expected current result:
 
 ```text
-7 passed, 4 skipped
+11 passed, 4 skipped
 ```
 
 The skipped tests require live Gemini or a running Stagehand service. Enable live

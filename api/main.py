@@ -7,6 +7,7 @@ from fastapi.responses import Response
 from prometheus_client import CONTENT_TYPE_LATEST
 from sse_starlette.sse import EventSourceResponse
 
+from api.grafana_exporter import grafana_exporter
 from api.simulator import SimulatorState, simulator
 
 router = APIRouter()
@@ -14,7 +15,11 @@ router = APIRouter()
 
 @router.get("/health")
 async def health_check() -> dict[str, str]:
-    return {"status": "ok", "service": "stagehand-api"}
+    return {
+        "status": "ok",
+        "service": "stagehand-api",
+        "grafana_otlp": "configured" if grafana_exporter.enabled else "not_configured",
+    }
 
 
 @router.get("/metrics")
@@ -34,12 +39,18 @@ async def get_stage_logs() -> list[dict[str, object]]:
 
 @router.post("/scenario/trigger/gpu-pressure")
 async def trigger_gpu_pressure():
-    return simulator.trigger_gpu_pressure()
+    snapshot = simulator.trigger_gpu_pressure()
+    await asyncio.to_thread(
+        grafana_exporter.publish, snapshot, simulator.correlated_logs()
+    )
+    return snapshot
 
 
 @router.post("/scenario/reset")
 async def reset_scenario():
-    return simulator.reset()
+    snapshot = simulator.reset()
+    await asyncio.to_thread(grafana_exporter.publish, snapshot)
+    return snapshot
 
 
 @router.get("/incidents/{incident_id}/events")

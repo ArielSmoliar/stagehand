@@ -22,6 +22,22 @@ def test_health_and_scenario_endpoints() -> None:
     assert client.get("/stage/logs").json()[0]["event"] == "gpu_allocation_failed"
 
 
+def test_trigger_publishes_incident_to_grafana_exporter(monkeypatch) -> None:
+    published = []
+
+    def record(snapshot, logs=None) -> bool:
+        published.append((snapshot, logs))
+        return True
+
+    monkeypatch.setattr("api.main.grafana_exporter.publish", record)
+    response = client.post("/scenario/trigger/gpu-pressure")
+
+    assert response.status_code == 200
+    assert len(published) == 1
+    assert published[0][0].incident_id == "inc-1042"
+    assert published[0][1][0]["event"] == "gpu_allocation_failed"
+
+
 def test_metrics_include_stage_context() -> None:
     client.post("/scenario/trigger/gpu-pressure")
     metrics = client.get("/metrics").text
