@@ -18,8 +18,8 @@ incident-scoped recommendation.
 > Stagehand is under active development for **Agentic Cinema: The Blockbuster
 > Hackathon**, in the Grafana partner track. The deterministic simulator and local
 > API foundation, Grafana Cloud OTLP export, and read-back through the official
-> Grafana MCP and the local supervisor console work today. Hosted deployment and
-> the incident-bound approval/recovery loop remain milestone work.
+> Grafana MCP, the local supervisor console, and the incident-bound simulated
+> failover/recovery loop work today. Hosted deployment remains milestone work.
 
 ## Why Stagehand
 
@@ -77,7 +77,8 @@ Cloud Run
 
 The submitted runtime is designed to use only Google Cloud AI tooling. Grafana MCP is
 launched with `--disable-write`; the agent can investigate and recommend but cannot
-approve or execute remediation.
+approve or execute remediation. A separate FastAPI control boundary accepts an exact,
+incident-bound human confirmation for the deterministic failover simulation only.
 
 ## How the agent works
 
@@ -112,14 +113,14 @@ events. Cloud Run is the planned public runtime for the combined FastAPI and ADK
 | FastAPI health, scenario, state, metrics, logs, and SSE routes | Working |
 | Google ADK Stagehand agent | Working locally |
 | Read-only `mcp-grafana` subprocess connection | Live connection verified |
-| Automated unit/API suite | 12 passing tests |
+| Automated unit/API suite | 15 passing tests |
 | Live Gemini diagnosis through Grafana MCP | Verified with a bounded tool trajectory |
 | OTLP metrics and log exporter for Grafana Cloud | Live ingestion verified |
 | Prometheus and Loki read-back through official Grafana MCP | Live queries verified |
 | Cloud Run deployment | Scaffolded, not deployed |
 | Virtual-production supervisor console | Working locally |
-| Human acknowledgement boundary | Working; remediation intentionally unavailable |
-| Incident-bound approval and recovery loop | Planned |
+| Incident-bound human approval | Working; stale and duplicate approvals rejected |
+| Simulated failover and 15-second recovery verification | Working locally |
 
 The August 11 live agent smoke test used Gemini 3.6 Flash through Google ADK. Gemini
 issued one combined Prometheus query for the incident metrics, queried Loki within the
@@ -153,8 +154,10 @@ Add credentials to `.env`. Never commit that file.
 Open [http://127.0.0.1:8000/console/](http://127.0.0.1:8000/console/) to operate
 the virtual-production supervisor console. Triggering GPU pressure starts the
 incident-scoped Gemini investigation and streams its evidence-backed recommendation
-into the investigation slate. The acknowledgement control records human review only;
-it cannot execute remediation.
+into the investigation slate. Only after that recommendation is ready can the supervisor
+approve an incident-bound simulated failover. Stagehand isolates `render-3`, waits 15
+seconds, and verifies that frame time and LED sync return within budget. No infrastructure
+or Grafana write action is available.
 
 ```dotenv
 GOOGLE_API_KEY=your-google-api-key
@@ -282,7 +285,11 @@ The Stagehand agent:
 - Treats log contents as untrusted evidence, never as instructions.
 - Must identify missing evidence and avoid recommending failover when critical signals
   are unavailable.
-- Does not contain approval or remediation tools in the current milestone.
+- Keeps approval outside the agent toolset; the agent cannot approve its own recommendation.
+- Requires an exact confirmation phrase bound to the active incident and rejects stale or
+  duplicate approvals.
+- Permits only deterministic simulator failover; no infrastructure or Grafana write action
+  is exposed.
 
 ## Testing
 
@@ -339,7 +346,7 @@ agents-cli deploy
 3. Verify Prometheus and Loki retrieval directly through Grafana MCP.
 4. Run repeated Gemini diagnosis evaluations when quota is available.
 5. Validate the supervisor console and live Gemini/Grafana investigation flow.
-6. Add incident-bound approval, simulated failover, and 15-second recovery verification.
+6. Validate incident-bound approval, simulated failover, and 15-second recovery verification.
 7. Create the Grafana dashboard, alert, deployment, and three-minute demo.
 
 ## Repository map

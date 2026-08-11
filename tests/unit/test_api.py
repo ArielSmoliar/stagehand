@@ -68,3 +68,35 @@ def test_missing_credentials_block_investigation(monkeypatch) -> None:
     assert "evidence_snapshot" in response.text
     assert "investigation_blocked" in response.text
     assert "investigation_complete" not in response.text
+
+
+def test_failover_requires_exact_incident_bound_human_approval() -> None:
+    client.post("/scenario/trigger/gpu-pressure")
+
+    rejected = client.post(
+        "/incidents/inc-1042/approve-failover",
+        json={"approver": "supervisor", "confirmation": "approve"},
+    )
+    assert rejected.status_code == 422
+
+    approved = client.post(
+        "/incidents/inc-1042/approve-failover",
+        json={
+            "approver": "supervisor",
+            "confirmation": "APPROVE SIMULATED FAILOVER",
+        },
+    )
+    assert approved.status_code == 200
+    assert approved.json()["action"] == "simulated_render_node_failover"
+    assert approved.json()["recovery_window_seconds"] == 15
+    assert approved.json()["snapshot"]["state"] == "RECOVERING"
+    assert approved.json()["snapshot"]["render_pool"]["render-3"] is False
+
+    duplicate = client.post(
+        "/incidents/inc-1042/approve-failover",
+        json={
+            "approver": "supervisor",
+            "confirmation": "APPROVE SIMULATED FAILOVER",
+        },
+    )
+    assert duplicate.status_code == 409

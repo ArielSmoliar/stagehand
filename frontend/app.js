@@ -20,6 +20,7 @@ const elements = {
 };
 
 let eventSource = null;
+let recoveryPoll = null;
 
 function updateClock() {
   elements.clock.textContent = new Intl.DateTimeFormat("en-US", {
@@ -40,12 +41,15 @@ function setStep(step, state, detail) {
 
 function resetInvestigation() {
   if (eventSource) eventSource.close();
+  if (recoveryPoll) clearInterval(recoveryPoll);
   eventSource = null;
+  recoveryPoll = null;
   elements.agentState.textContent = "Standing by";
   elements.agentReport.className = "report";
   elements.agentReport.innerHTML = '<p class="empty-copy">Trigger GPU pressure to begin an evidence-grounded investigation.</p>';
   elements.ackButton.disabled = true;
-  elements.decisionCopy.textContent = "No operational action can run from this console.";
+  elements.ackButton.textContent = "Approve simulated failover";
+  elements.decisionCopy.textContent = "A recommendation must be reviewed before simulated failover is available.";
   setStep("telemetry", "", "Awaiting incident");
   setStep("metrics", "", "Evidence query pending");
   setStep("logs", "", "Correlation pending");
@@ -68,9 +72,10 @@ function renderStage(snapshot) {
     .map(([node, frameTime]) => {
       const gpu = snapshot.gpu_memory_ratio[node];
       const affected = frameTime > 16.7;
+      const active = snapshot.render_pool[node];
       return `
-        <article class="node-card ${affected ? "is-affected" : ""}">
-          <div class="node-name"><span>${node}</span><span>${affected ? "Over budget" : "Ready"}</span></div>
+        <article class="node-card ${affected ? "is-affected" : ""} ${active ? "" : "is-offline"}">
+          <div class="node-name"><span>${node}</span><span>${active ? (affected ? "Over budget" : "Ready") : "Failed over"}</span></div>
           <p class="node-metric">${frameTime.toFixed(1)}<small> ms</small></p>
           <div class="meter" aria-label="GPU memory ${Math.round(gpu * 100)} percent"><span style="width:${gpu * 100}%"></span></div>
           <div class="node-detail"><span>GPU memory</span><span>${Math.round(gpu * 100)}%</span></div>
@@ -161,10 +166,56 @@ elements.resetButton.addEventListener("click", async () => {
   }
 });
 
-elements.ackButton.addEventListener("click", () => {
+function watchRecovery(incidentId, seconds) {
+  let remaining = seconds;
+  elements.agentState.textContent = `Recovery check · ${remaining}s`;
+  elements.decisionCopy.textContent = `Failover approved. Verifying stage stability in ${remaining}s.`;
+  recoveryPoll = setInterval(async () => {
+    remaining = Math.max(0, remaining - 1);
+    try {
+      const snapshot = await requestJson("/stage/state");
+      renderStage(snapshot);
+      if (snapshot.incident_id !== incidentId) throw new Error("active incident changed");
+      if (snapshot.state === "STABLE") {
+        clearInterval(recoveryPoll);
+        recoveryPoll = null;
+        elements.agentState.textContent = "Recovery verified";
+        elements.decisionCopy.textContent = "Stable: frame time and LED sync are back within budget. Human approval remains recorded.";
+        elements.ackButton.textContent = "Failover approved";
+        return;
+      }
+      elements.agentState.textContent = `Recovery check · ${remaining}s`;
+      elements.decisionCopy.textContent = `render-3 is isolated. Verifying stage stability in ${remaining}s.`;
+    } catch (error) {
+      clearInterval(recoveryPoll);
+      recoveryPoll = null;
+      elements.agentState.textContent = "Recovery check failed";
+      elements.decisionCopy.textContent = `Manual inspection required: ${error.message}`;
+    }
+  }, 1000);
+}
+
+elements.ackButton.addEventListener("click", async () => {
   elements.ackButton.disabled = true;
-  elements.ackButton.textContent = "Recommendation acknowledged";
-  elements.decisionCopy.textContent = "Acknowledged locally. No remediation was executed.";
+  elements.ackButton.textContent = "Approval recorded";
+  try {
+    const incidentId = elements.incidentId.textContent;
+    const result = await requestJson(`/incidents/${incidentId}/approve-failover`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        approver: "production-supervisor",
+        confirmation: "APPROVE SIMULATED FAILOVER",
+      }),
+    });
+    renderStage(result.snapshot);
+    watchRecovery(incidentId, result.recovery_window_seconds);
+  } catch (error) {
+    elements.agentState.textContent = "Approval rejected";
+    elements.decisionCopy.textContent = `No action executed: ${error.message}`;
+    elements.ackButton.disabled = false;
+    elements.ackButton.textContent = "Retry simulated failover";
+  }
 });
 
 async function initialize() {

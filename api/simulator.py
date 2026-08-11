@@ -33,6 +33,8 @@ class StageSnapshot(BaseModel):
     network_packet_loss_ratio: float
     render_pool: dict[str, bool]
     allocation_failures_total: int
+    approved_incident_id: str | None = None
+    approved_by: str | None = None
 
 
 class StageSimulator:
@@ -137,6 +139,41 @@ class StageSimulator:
         with self._lock:
             previous_failures = self._snapshot.allocation_failures_total
             self._snapshot = self._healthy_snapshot()
+            self._publish_snapshot(previous_failures)
+            return self._snapshot.model_copy(deep=True)
+
+    def approve_failover(self, incident_id: str, approver: str) -> StageSnapshot:
+        """Remove the affected node from the pool after incident-bound approval."""
+        with self._lock:
+            if self._snapshot.incident_id != incident_id:
+                raise ValueError("approval does not match the active incident")
+            if self._snapshot.state != SimulatorState.SYNC_DRIFT:
+                raise RuntimeError("incident is not awaiting failover approval")
+
+            previous_failures = self._snapshot.allocation_failures_total
+            self._snapshot.state = SimulatorState.RECOVERING
+            self._snapshot.approved_incident_id = incident_id
+            self._snapshot.approved_by = approver
+            self._snapshot.render_pool["render-3"] = False
+            self._snapshot.frame_time_ms["render-3"] = 0.0
+            self._snapshot.gpu_memory_ratio["render-3"] = 0.0
+            self._snapshot.led_sync_offset_ms = 6.4
+            self._publish_snapshot(previous_failures)
+            return self._snapshot.model_copy(deep=True)
+
+    def complete_recovery(self, incident_id: str) -> StageSnapshot:
+        """Verify that the remaining pool is stable after the recovery window."""
+        with self._lock:
+            if self._snapshot.incident_id != incident_id:
+                raise ValueError("recovery does not match the active incident")
+            if self._snapshot.state != SimulatorState.RECOVERING:
+                raise RuntimeError("incident is not recovering")
+
+            previous_failures = self._snapshot.allocation_failures_total
+            self._snapshot.state = SimulatorState.STABLE
+            self._snapshot.frame_time_ms["render-1"] = 12.3
+            self._snapshot.frame_time_ms["render-2"] = 12.5
+            self._snapshot.led_sync_offset_ms = 2.6
             self._publish_snapshot(previous_failures)
             return self._snapshot.model_copy(deep=True)
 

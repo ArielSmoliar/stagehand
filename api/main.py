@@ -1,16 +1,38 @@
 import asyncio
 import json
 import os
+from threading import Lock, Timer
 
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import Response
 from prometheus_client import CONTENT_TYPE_LATEST
+from pydantic import BaseModel
 from sse_starlette.sse import EventSourceResponse
 
 from api.grafana_exporter import grafana_exporter
 from api.simulator import simulator
 
 router = APIRouter()
+RECOVERY_WINDOW_SECONDS = 15
+APPROVAL_CONFIRMATION = "APPROVE SIMULATED FAILOVER"
+_recovery_timers: dict[str, Timer] = {}
+_recovery_timers_lock = Lock()
+
+
+class FailoverApproval(BaseModel):
+    approver: str
+    confirmation: str
+
+
+def _finish_recovery(incident_id: str) -> None:
+    try:
+        snapshot = simulator.complete_recovery(incident_id)
+        grafana_exporter.publish(snapshot)
+    except (RuntimeError, ValueError):
+        pass
+    finally:
+        with _recovery_timers_lock:
+            _recovery_timers.pop(incident_id, None)
 
 
 @router.get("/health")
@@ -48,9 +70,43 @@ async def trigger_gpu_pressure():
 
 @router.post("/scenario/reset")
 async def reset_scenario():
+    with _recovery_timers_lock:
+        for timer in _recovery_timers.values():
+            timer.cancel()
+        _recovery_timers.clear()
     snapshot = simulator.reset()
     await asyncio.to_thread(grafana_exporter.publish, snapshot)
     return snapshot
+
+
+@router.post("/incidents/{incident_id}/approve-failover")
+async def approve_failover(incident_id: str, approval: FailoverApproval):
+    if not approval.approver.strip():
+        raise HTTPException(status_code=422, detail="approver is required")
+    if approval.confirmation != APPROVAL_CONFIRMATION:
+        raise HTTPException(
+            status_code=422, detail="confirmation phrase does not match"
+        )
+
+    try:
+        snapshot = simulator.approve_failover(incident_id, approval.approver.strip())
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except RuntimeError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+
+    await asyncio.to_thread(grafana_exporter.publish, snapshot)
+    timer = Timer(RECOVERY_WINDOW_SECONDS, _finish_recovery, args=(incident_id,))
+    timer.daemon = True
+    with _recovery_timers_lock:
+        _recovery_timers[incident_id] = timer
+    timer.start()
+    return {
+        "snapshot": snapshot,
+        "approved_by": approval.approver.strip(),
+        "action": "simulated_render_node_failover",
+        "recovery_window_seconds": RECOVERY_WINDOW_SECONDS,
+    }
 
 
 @router.get("/incidents/{incident_id}/events")

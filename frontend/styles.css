@@ -169,6 +169,8 @@ main { width: min(1500px, 100%); margin: 0 auto; padding: clamp(1rem, 3vw, 3rem)
 .meter { height: 4px; margin-top: 1rem; background: var(--line); overflow: hidden; }
 .meter span { display: block; height: 100%; background: var(--projection); }
 .node-card.is-affected .meter span { background: var(--signal); }
+.node-card.is-offline { opacity: 0.55; }
+.node-card.is-offline .meter span { width: 0 !important; }
 .node-detail { display: flex; justify-content: space-between; margin-top: 0.6rem; color: var(--muted); font: 600 0.65rem/1 var(--utility); }
 
 .signal-grid { display: grid; grid-template-columns: repeat(3, 1fr); }
