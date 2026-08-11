@@ -17,6 +17,7 @@ Choose a dedicated hackathon project rather than an unrelated production project
 export STAGEHAND_PROJECT="your-stagehand-project-id"
 export STAGEHAND_REGION="us-east1"
 gcloud config set project "$STAGEHAND_PROJECT"
+gcloud auth application-default login
 gcloud auth application-default set-quota-project "$STAGEHAND_PROJECT"
 ```
 
