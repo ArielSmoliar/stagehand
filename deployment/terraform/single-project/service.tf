@@ -45,11 +45,11 @@ resource "google_cloud_run_v2_service" "app" {
     }
 
     service_account                  = google_service_account.app_sa.email
-    max_instance_request_concurrency = 8
+    max_instance_request_concurrency = 4
 
     scaling {
-      min_instance_count = 1
-      max_instance_count = 10
+      min_instance_count = 0
+      max_instance_count = 2
     }
 
     session_affinity = true
