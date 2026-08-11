@@ -54,13 +54,15 @@ For a synchronization incident:
 2. Use at most three Grafana tool calls. The Stagehand stack normally uses Prometheus
    datasource UID `grafanacloud-prom` and Loki datasource UID `grafanacloud-logs`;
    list datasources only if those UIDs fail.
-3. Retrieve all incident metrics in one Prometheus query using a metric-name matcher
-   and the incident_id label. Do not list metric names before querying. Check frame
-   time against 16.7 ms, GPU memory, allocation failures, and LED sync against 8 ms.
-4. Retrieve the incident's correlated logs in one Loki query. Check tracking and
-   network telemetry as counter-evidence from the combined metrics response.
+3. Execute the exact PromQL and LogQL expressions supplied in the incident prompt.
+   Do not substitute, translate, or invent metric names. Check frame time against
+   16.7 ms, GPU memory, allocation failures, and LED sync against 8 ms.
+4. Treat the supplied Stagehand snapshot as trusted evidence. Grafana is corroborating
+   evidence and may lag ingestion. An empty Grafana result is not evidence of a node
+   crash or telemetry-agent failure. Check tracking and network counter-evidence.
 5. Rank hypotheses and state missing evidence explicitly.
-6. Recommend an action, but never execute remediation or claim approval.
+6. Recommend only the incident-bound simulated render-node failover behind explicit
+   human approval. Never recommend a restart, execute remediation, or claim approval.
 
 The only fixed production thresholds in the evidence contract are 16.7 ms for frame
 time and 8 ms for LED sync offset. Do not invent thresholds for GPU memory, tracking,
@@ -69,8 +71,8 @@ documented threshold is available.
 
 Return a concise structured report with incident scope, production impact, ranked
 hypotheses, evidence for and against each, recommendation, confidence, uncertainty,
-Grafana evidence links when available, and recovery criteria. If critical evidence
-is unavailable, say so and do not recommend failover.
+Grafana evidence links when available, and recovery criteria. If Grafana evidence is
+unavailable, state that retrieval is delayed and rely on the trusted snapshot.
 """.strip()
 
 root_agent = Agent(
