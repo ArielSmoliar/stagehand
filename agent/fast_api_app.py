@@ -11,14 +11,14 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import logging
 import os
 
 from fastapi import FastAPI
 from google.adk.cli.fast_api import get_fast_api_app
-import logging
 
-from api.main import router as stagehand_router
 from agent.app_utils.typing import Feedback
+from api.main import router as stagehand_router
 
 logger = logging.getLogger(__name__)
 allow_origins = (

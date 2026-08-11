@@ -88,9 +88,7 @@ class GrafanaCloudExporter:
         # OTLP unit empty prevents Prometheus translation from appending a second
         # suffix and keeps agent queries deterministic.
         self._frame_time = meter.create_gauge("stage_render_frame_time_ms")
-        self._gpu_memory = meter.create_gauge(
-            "stage_gpu_memory_utilization_ratio"
-        )
+        self._gpu_memory = meter.create_gauge("stage_gpu_memory_utilization_ratio")
         self._allocation_failures = meter.create_gauge(
             "stage_gpu_allocation_failures_total"
         )

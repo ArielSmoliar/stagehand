@@ -79,6 +79,29 @@ The submitted runtime is designed to use only Google Cloud AI tooling. Grafana M
 launched with `--disable-write`; the agent can investigate and recommend but cannot
 approve or execute remediation.
 
+## How the agent works
+
+Grafana provides the operational truth; Google ADK controls the investigation
+workflow; Gemini decides what evidence to retrieve and reasons over it to recommend a
+safe production action.
+
+```text
+Supervisor request
+  → Google ADK starts an incident-scoped session
+  → Gemini chooses bounded, read-only Grafana MCP queries
+  → Prometheus establishes impact, scope, and likely cause
+  → Loki supplies the correlated production event
+  → Gemini checks tracking and network counter-evidence
+  → Stagehand ranks hypotheses and returns a recommendation
+  → Human supervisor retains approval authority
+```
+
+This is not a fixed report generator. Gemini dynamically invokes the official Grafana
+MCP tools, interprets their live responses, identifies missing evidence, and decides
+whether the evidence supports holding or continuing the take. Google ADK supplies the
+agent definition, session and runner lifecycle, MCP tool integration, and streamed
+events. Cloud Run is the planned public runtime for the combined FastAPI and ADK app.
+
 ## Current status
 
 | Capability | Status |
@@ -90,11 +113,19 @@ approve or execute remediation.
 | Google ADK Stagehand agent | Working locally |
 | Read-only `mcp-grafana` subprocess connection | Live connection verified |
 | Automated unit/API suite | 11 passing tests |
-| Live Gemini diagnosis | Blocked during latest check by API quota |
+| Live Gemini diagnosis through Grafana MCP | Verified with a bounded tool trajectory |
 | OTLP metrics and log exporter for Grafana Cloud | Live ingestion verified |
 | Prometheus and Loki read-back through official Grafana MCP | Live queries verified |
 | Cloud Run deployment | Scaffolded, not deployed |
 | Supervisor console and approval/recovery loop | Planned |
+
+The August 11 live agent smoke test used Gemini 3.6 Flash through Google ADK. Gemini
+issued one combined Prometheus query for the incident metrics, queried Loki within the
+three-call investigation budget, evaluated tracking and network counter-evidence, and
+returned an incident-scoped recommendation without executing remediation. The focused
+Vertex evaluation case is prepared in `tests/eval`; grading requires Google Cloud
+Application Default Credentials and is intentionally kept separate from API-key-only
+local development.
 
 ## Quick start
 

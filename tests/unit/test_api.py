@@ -4,7 +4,6 @@ from fastapi.testclient import TestClient
 from api.main import router
 from api.simulator import simulator
 
-
 app = FastAPI()
 app.include_router(router)
 client = TestClient(app)

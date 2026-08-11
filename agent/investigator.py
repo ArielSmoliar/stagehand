@@ -25,9 +25,12 @@ async def investigate(snapshot: StageSnapshot) -> AsyncIterator[str]:
 Investigate incident {snapshot.incident_id} for {snapshot.stage_id},
 {snapshot.scene_id}, {snapshot.take_id}. Grafana currently reports scenario state
 {snapshot.state.value}. Retrieve the relevant Stagehand Prometheus metrics and Loki
-logs through Grafana MCP. Determine why render-3 exceeded the 16.7 ms frame budget
-and the LED synchronization offset exceeded 8 ms. Check tracking and network evidence
-before recommending any action. Do not execute remediation.
+logs through Grafana MCP. Use at most three Grafana tool calls: query all Stagehand
+metrics for incident {snapshot.incident_id} together, then query its correlated logs;
+list datasources only if the known datasource UIDs fail. Determine why render-3
+exceeded the 16.7 ms frame budget and the LED synchronization offset exceeded 8 ms.
+Check tracking and network evidence before recommending any action. Do not execute
+remediation.
 """.strip()
     message = types.Content(role="user", parts=[types.Part.from_text(text=prompt)])
     async for event in runner.run_async(

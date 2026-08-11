@@ -1,13 +1,13 @@
 from __future__ import annotations
 
-from enum import Enum
+from enum import StrEnum
 from threading import Lock
 
 from prometheus_client import CollectorRegistry, Counter, Gauge, generate_latest
 from pydantic import BaseModel
 
 
-class SimulatorState(str, Enum):
+class SimulatorState(StrEnum):
     HEALTHY = "HEALTHY"
     GPU_PRESSURE_STARTING = "GPU_PRESSURE_STARTING"
     SYNC_DRIFT = "SYNC_DRIFT"
@@ -106,7 +106,7 @@ class StageSimulator:
             tracking_packet_loss_ratio=0.0001,
             network_latency_ms=1.8,
             network_packet_loss_ratio=0.0002,
-            render_pool={node: True for node in self.nodes},
+            render_pool=dict.fromkeys(self.nodes, True),
             allocation_failures_total=0,
         )
 
@@ -127,7 +127,7 @@ class StageSimulator:
                 tracking_packet_loss_ratio=0.0001,
                 network_latency_ms=1.9,
                 network_packet_loss_ratio=0.0002,
-                render_pool={node: True for node in self.nodes},
+                render_pool=dict.fromkeys(self.nodes, True),
                 allocation_failures_total=previous_failures + 3,
             )
             self._publish_snapshot(previous_failures)
@@ -175,8 +175,13 @@ class StageSimulator:
             labels = {"render_node": node, **context}
             self.frame_time.labels(**labels).set(snapshot.frame_time_ms[node])
             self.gpu_memory.labels(**labels).set(snapshot.gpu_memory_ratio[node])
-            self.render_pool_member.labels(**labels).set(int(snapshot.render_pool[node]))
-            if snapshot.allocation_failures_total > previous_failures and node == "render-3":
+            self.render_pool_member.labels(**labels).set(
+                int(snapshot.render_pool[node])
+            )
+            if (
+                snapshot.allocation_failures_total > previous_failures
+                and node == "render-3"
+            ):
                 self.allocation_failures.labels(**labels).inc(
                     snapshot.allocation_failures_total - previous_failures
                 )

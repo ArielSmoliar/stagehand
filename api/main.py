@@ -8,7 +8,7 @@ from prometheus_client import CONTENT_TYPE_LATEST
 from sse_starlette.sse import EventSourceResponse
 
 from api.grafana_exporter import grafana_exporter
-from api.simulator import SimulatorState, simulator
+from api.simulator import simulator
 
 router = APIRouter()
 
@@ -87,7 +87,11 @@ async def incident_events(incident_id: str, request: Request) -> EventSourceResp
         if not (
             os.getenv("GRAFANA_URL")
             and os.getenv("GRAFANA_SERVICE_ACCOUNT_TOKEN")
-            and (os.getenv("GOOGLE_API_KEY") or os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_GENAI_USE_VERTEXAI") == "true")
+            and (
+                os.getenv("GOOGLE_API_KEY")
+                or os.getenv("GEMINI_API_KEY")
+                or os.getenv("GOOGLE_GENAI_USE_VERTEXAI") == "true"
+            )
         ):
             yield {
                 "event": "investigation_blocked",

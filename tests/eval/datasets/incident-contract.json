@@ -1,0 +1,15 @@
+{
+  "eval_cases": [
+    {
+      "eval_case_id": "gpu_pressure_incident_contract",
+      "prompt": {
+        "role": "user",
+        "parts": [
+          {
+            "text": "Investigate active Stagehand incident inc-1042 for volume-a, scene-24, take-07. Use Grafana MCP evidence, check counter-evidence, state missing evidence, recommend but do not execute an action, and do not invent thresholds."
+          }
+        ]
+      }
+    }
+  ]
+}
