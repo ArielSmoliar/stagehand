@@ -64,7 +64,11 @@ resource "google_cloud_run_v2_service" "app" {
   # updated by Cloud Run deployments outside of Terraform (e.g., via CI/CD pipelines)
   lifecycle {
     ignore_changes = [
+      build_config,
+      client,
+      client_version,
       template[0].containers[0].image,
+      template[0].containers[0].env,
     ]
   }
 

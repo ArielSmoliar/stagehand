@@ -26,3 +26,11 @@ resource "google_storage_bucket" "logs_data_bucket" {
 
   depends_on = [resource.google_project_service.services]
 }
+
+# ADK's GCS artifact service reads, creates, lists, and deletes versioned
+# objects. Keep that access scoped to Stagehand's bucket instead of project-wide.
+resource "google_storage_bucket_iam_member" "app_sa_artifact_access" {
+  bucket = google_storage_bucket.logs_data_bucket.name
+  role   = "roles/storage.objectUser"
+  member = "serviceAccount:${google_service_account.app_sa.email}"
+}
