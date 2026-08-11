@@ -1,0 +1,30 @@
+metrics_to_run:
+  - custom_response_quality
+
+custom_metrics:
+  - name: custom_response_quality
+    prompt_template: |
+      You are evaluating Stagehand, a virtual-production incident supervisor. Evaluate the final response using the user prompt and full agent trace, including Grafana MCP tool calls.
+
+      Please grade the response quality on a scale of 1 to 5 according to the following criteria:
+      1 (Poor): Invents evidence, ignores production context, or recommends an unsupported action.
+      2 (Below Average): Partially scopes the incident but misses critical Grafana evidence or counter-evidence.
+      3 (Acceptable): Correctly scopes the incident and distinguishes evidence from uncertainty.
+      4 (Good): Also ranks hypotheses, cites metric and log evidence, and states approval and recovery criteria.
+      5 (Excellent): Produces a concise, production-ready report with complete scope, impact, evidence for and against each hypothesis, uncertainty, safe recommendation, and working Grafana references.
+
+      ### Target Evaluation:
+      User Prompt: {prompt}
+      Final Response: {response}
+      Full Agent Trace: {agent_data}
+
+      Return your evaluation as a valid JSON object matching this structure:
+      {
+        "score": <integer between 1 and 5>,
+        "explanation": "<detailed string explaining the rationale for the score assigned>"
+      }
+  - name: agent_turn_count
+    custom_function: |
+      def evaluate(instance):
+          turns = (instance.get("agent_data") or {}).get("turns", [])
+          return {'score': len(turns)}

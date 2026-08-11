@@ -1,0 +1,37 @@
+{
+  "eval_cases": [
+    {
+      "eval_case_id": "healthy_stage",
+      "prompt": {
+        "role": "user",
+        "parts": [
+          {
+            "text": "Check the current virtual-stage health. Do not invent an incident when Grafana evidence is healthy."
+          }
+        ]
+      }
+    },
+    {
+      "eval_case_id": "gpu_pressure_sync_drift",
+      "prompt": {
+        "role": "user",
+        "parts": [
+          {
+            "text": "Investigate incident inc-1042 for volume-a, scene-24, take-07. Identify the affected render node using Grafana metrics and correlated Loki logs, check tracking and network counter-evidence, and recommend but do not execute an action."
+          }
+        ]
+      }
+    },
+    {
+      "eval_case_id": "missing_evidence",
+      "prompt": {
+        "role": "user",
+        "parts": [
+          {
+            "text": "Investigate the active synchronization alert, but do not recommend failover if either the critical render metric or correlated log cannot be retrieved."
+          }
+        ]
+      }
+    }
+  ]
+}

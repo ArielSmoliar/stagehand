@@ -1,0 +1,10 @@
+# Compatibility file for tools that do not support pyproject.toml.
+# The canonical dependency specification is pyproject.toml.
+fastapi>=0.115.8,<1.0.0
+google-adk>=2.0.0,<3.0.0
+mcp>=1.29.0,<2.0.0
+mcp-grafana>=1.1.0,<2.0.0
+prometheus-client>=0.21.0,<1.0.0
+python-dotenv>=1.0.1,<2.0.0
+sse-starlette>=2.0.0,<4.0.0
+uvicorn>=0.34.0,<1.0.0
