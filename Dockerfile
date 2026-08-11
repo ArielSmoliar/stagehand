@@ -24,7 +24,9 @@ COPY ./agent ./agent
 COPY ./api ./api
 COPY ./frontend ./frontend
 
-RUN uv sync --no-dev
+RUN uv sync --no-dev && uv run mcp-grafana --version
+
+ENV PATH="/code/.venv/bin:${PATH}"
 
 ARG COMMIT_SHA=""
 ENV COMMIT_SHA=${COMMIT_SHA}
@@ -34,4 +36,4 @@ ENV AGENT_VERSION=${AGENT_VERSION}
 
 EXPOSE 8080
 
-CMD ["uv", "run", "uvicorn", "agent.fast_api_app:app", "--host", "0.0.0.0", "--port", "8080"]
+CMD ["uvicorn", "agent.fast_api_app:app", "--host", "0.0.0.0", "--port", "8080"]

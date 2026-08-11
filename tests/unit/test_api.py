@@ -14,7 +14,9 @@ def setup_function() -> None:
 
 
 def test_health_and_scenario_endpoints() -> None:
-    assert client.get("/health").json()["status"] == "ok"
+    health = client.get("/stage/health").json()
+    assert health["status"] == "ok"
+    assert health["grafana_mcp"] == "available"
     response = client.post("/scenario/trigger/gpu-pressure")
     assert response.status_code == 200
     assert response.json()["incident_id"] == "inc-1042"

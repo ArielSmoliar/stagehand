@@ -1,6 +1,7 @@
 import asyncio
 import json
 import os
+import shutil
 from threading import Lock, Timer
 
 from fastapi import APIRouter, HTTPException, Request
@@ -36,11 +37,14 @@ def _finish_recovery(incident_id: str) -> None:
 
 
 @router.get("/health")
+@router.get("/stage/health")
 async def health_check() -> dict[str, str]:
+    mcp_command = os.getenv("MCP_GRAFANA_COMMAND", "mcp-grafana")
     return {
         "status": "ok",
         "service": "stagehand-api",
         "grafana_otlp": "configured" if grafana_exporter.enabled else "not_configured",
+        "grafana_mcp": "available" if shutil.which(mcp_command) else "missing",
     }
 
 

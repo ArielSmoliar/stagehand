@@ -326,7 +326,9 @@ than brittle string-matching unit tests.
 ## Cloud Run deployment
 
 The repository includes Google Agents CLI Cloud Run scaffolding. Deployment is an
-explicit operator action and has not yet been performed.
+explicit operator action and has not yet been performed. Follow the
+[Cloud Run deployment runbook](docs/cloud-run-deployment.md) for the least-privilege
+service account, Secret Manager bindings, dry run, and end-to-end verification gate.
 
 For the hosted submission, use Google Cloud application credentials and configure:
 
@@ -337,13 +339,9 @@ GOOGLE_CLOUD_LOCATION=global
 ENABLE_CLOUD_TELEMETRY=true
 ```
 
-Then authenticate and deploy only after the live Grafana ingestion checks pass:
-
-```bash
-gcloud auth login --update-adc
-gcloud config set project YOUR_PROJECT_ID
-agents-cli deploy
-```
+Do not deploy into an unrelated production project or pass Grafana credentials as
+plaintext environment-variable values. The runbook keeps Cloud Run authenticated until
+the complete hosted flow has passed.
 
 ## Roadmap
 

@@ -16,6 +16,7 @@ locals {
   services = [
     "aiplatform.googleapis.com",
     "cloudbuild.googleapis.com",
+    "secretmanager.googleapis.com",
     "run.googleapis.com",
     "bigquery.googleapis.com",
     "cloudresourcemanager.googleapis.com",
