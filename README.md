@@ -17,9 +17,9 @@ incident-scoped recommendation.
 
 > Stagehand is under active development for **Agentic Cinema: The Blockbuster
 > Hackathon**, in the Grafana partner track. The deterministic simulator and local
-> API foundation and Grafana Cloud OTLP exporter work today. Live ingestion
-> verification, hosted deployment, the supervisor console, and the approval/recovery
-> loop remain milestone work.
+> API foundation, Grafana Cloud OTLP export, and read-back through the official
+> Grafana MCP work today. Hosted deployment, the supervisor console, and the
+> approval/recovery loop remain milestone work.
 
 ## Why Stagehand
 
@@ -91,7 +91,8 @@ approve or execute remediation.
 | Read-only `mcp-grafana` subprocess connection | Live connection verified |
 | Automated unit/API suite | 11 passing tests |
 | Live Gemini diagnosis | Blocked during latest check by API quota |
-| OTLP metrics and log exporter for Grafana Cloud | Implemented; credentials needed for live verification |
+| OTLP metrics and log exporter for Grafana Cloud | Live ingestion verified |
+| Prometheus and Loki read-back through official Grafana MCP | Live queries verified |
 | Cloud Run deployment | Scaffolded, not deployed |
 | Supervisor console and approval/recovery loop | Planned |
 
@@ -207,6 +208,13 @@ stage_tracking_latency_ms
 stage_network_latency_ms
 stage_render_pool_member
 ```
+
+Live verification on August 11, 2026 confirmed that Grafana Cloud Prometheus returns
+all seven metric families with the incident context, including `render-3` frame time
+of 29 ms and GPU memory utilization of 0.98. A Loki query also returned the correlated
+`gpu_allocation_failed` event with `incident_id="inc-1042"` and
+`render_node="render-3"`. Both checks were executed through the official, read-only
+`mcp-grafana` connection used by the agent.
 
 ## Agent safety boundary
 
