@@ -13,8 +13,10 @@
 # limitations under the License.
 import logging
 import os
+from pathlib import Path
 
 from fastapi import FastAPI
+from fastapi.staticfiles import StaticFiles
 from google.adk.cli.fast_api import get_fast_api_app
 
 from agent.app_utils.typing import Feedback
@@ -45,6 +47,11 @@ app: FastAPI = get_fast_api_app(
 app.title = "stagehand"
 app.description = "API for interacting with the Agent stagehand"
 app.include_router(stagehand_router)
+app.mount(
+    "/console",
+    StaticFiles(directory=Path(AGENT_DIR) / "frontend", html=True),
+    name="console",
+)
 
 
 @app.post("/feedback")

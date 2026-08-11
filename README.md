@@ -18,8 +18,8 @@ incident-scoped recommendation.
 > Stagehand is under active development for **Agentic Cinema: The Blockbuster
 > Hackathon**, in the Grafana partner track. The deterministic simulator and local
 > API foundation, Grafana Cloud OTLP export, and read-back through the official
-> Grafana MCP work today. Hosted deployment, the supervisor console, and the
-> approval/recovery loop remain milestone work.
+> Grafana MCP and the local supervisor console work today. Hosted deployment and
+> the incident-bound approval/recovery loop remain milestone work.
 
 ## Why Stagehand
 
@@ -52,7 +52,7 @@ preserves the incident, stage, scene, and take identifiers.
 ## Architecture
 
 ```text
-Supervisor console (planned)
+Supervisor console
         |
         | HTTPS + server-sent events
         v
@@ -112,12 +112,14 @@ events. Cloud Run is the planned public runtime for the combined FastAPI and ADK
 | FastAPI health, scenario, state, metrics, logs, and SSE routes | Working |
 | Google ADK Stagehand agent | Working locally |
 | Read-only `mcp-grafana` subprocess connection | Live connection verified |
-| Automated unit/API suite | 11 passing tests |
+| Automated unit/API suite | 12 passing tests |
 | Live Gemini diagnosis through Grafana MCP | Verified with a bounded tool trajectory |
 | OTLP metrics and log exporter for Grafana Cloud | Live ingestion verified |
 | Prometheus and Loki read-back through official Grafana MCP | Live queries verified |
 | Cloud Run deployment | Scaffolded, not deployed |
-| Supervisor console and approval/recovery loop | Planned |
+| Virtual-production supervisor console | Working locally |
+| Human acknowledgement boundary | Working; remediation intentionally unavailable |
+| Incident-bound approval and recovery loop | Planned |
 
 The August 11 live agent smoke test used Gemini 3.6 Flash through Google ADK. Gemini
 issued one combined Prometheus query for the incident metrics, queried Loki within the
@@ -147,6 +149,12 @@ uv run uvicorn agent.fast_api_app:app --host 127.0.0.1 --port 8000
 ```
 
 Add credentials to `.env`. Never commit that file.
+
+Open [http://127.0.0.1:8000/console/](http://127.0.0.1:8000/console/) to operate
+the virtual-production supervisor console. Triggering GPU pressure starts the
+incident-scoped Gemini investigation and streams its evidence-backed recommendation
+into the investigation slate. The acknowledgement control records human review only;
+it cannot execute remediation.
 
 ```dotenv
 GOOGLE_API_KEY=your-google-api-key
@@ -330,7 +338,7 @@ agents-cli deploy
 2. Ingest the simulator metric and correlated log into Grafana Cloud.
 3. Verify Prometheus and Loki retrieval directly through Grafana MCP.
 4. Run repeated Gemini diagnosis evaluations when quota is available.
-5. Build the supervisor console and Grafana evidence links.
+5. Validate the supervisor console and live Gemini/Grafana investigation flow.
 6. Add incident-bound approval, simulated failover, and 15-second recovery verification.
 7. Create the Grafana dashboard, alert, deployment, and three-minute demo.
 

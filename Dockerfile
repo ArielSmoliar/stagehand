@@ -22,6 +22,7 @@ COPY ./pyproject.toml ./README.md ./uv.lock* ./
 
 COPY ./agent ./agent
 COPY ./api ./api
+COPY ./frontend ./frontend
 
 RUN uv sync --no-dev
 

@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#08131c" />
+    <title>Stagehand — Virtual Production Supervisor</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <a class="skip-link" href="#mission-control">Skip to mission control</a>
+    <header class="topbar">
+      <div class="brand-lockup">
+        <span class="brand-mark" aria-hidden="true">SH</span>
+        <div>
+          <p class="eyebrow">Volume A · Live operations</p>
+          <h1>Stagehand</h1>
+        </div>
+      </div>
+      <div class="production-clock" aria-label="Production clock">
+        <span>LOCAL</span>
+        <time id="clock">--:--:--</time>
+      </div>
+    </header>
+
+    <main id="mission-control">
+      <section class="take-slate" aria-labelledby="take-title">
+        <div class="slate-copy">
+          <p class="eyebrow">Virtual-production incident supervisor</p>
+          <h2 id="take-title">Keep the wall honest.<br />Keep the take safe.</h2>
+          <p class="lede">
+            Gemini investigates live Grafana evidence through Google ADK. Stagehand
+            recommends; the production supervisor decides.
+          </p>
+        </div>
+        <dl class="take-context" aria-label="Current production context">
+          <div><dt>Stage</dt><dd id="stage-id">volume-a</dd></div>
+          <div><dt>Scene</dt><dd id="scene-id">scene-24</dd></div>
+          <div><dt>Take</dt><dd id="take-id">take-07</dd></div>
+          <div><dt>Incident</dt><dd id="incident-id">Standby</dd></div>
+        </dl>
+      </section>
+
+      <section class="control-strip" aria-label="Scenario controls">
+        <div class="status-cluster">
+          <span class="status-lamp" id="status-lamp" aria-hidden="true"></span>
+          <div>
+            <p class="utility-label">Stage state</p>
+            <strong id="stage-state">Loading telemetry</strong>
+          </div>
+        </div>
+        <div class="control-actions">
+          <button class="button button-secondary" id="reset-button" type="button">
+            Reset stage
+          </button>
+          <button class="button button-primary" id="trigger-button" type="button">
+            Trigger GPU pressure
+          </button>
+        </div>
+      </section>
+
+      <div class="console-grid">
+        <section class="panel telemetry-panel" aria-labelledby="telemetry-title">
+          <div class="panel-heading">
+            <div>
+              <p class="eyebrow">Live evidence</p>
+              <h3 id="telemetry-title">Render wall</h3>
+            </div>
+            <span class="refresh-label">Grafana OTLP</span>
+          </div>
+
+          <div class="node-grid" id="node-grid" aria-live="polite"></div>
+
+          <div class="signal-grid">
+            <article class="signal-card">
+              <p>LED sync offset</p>
+              <strong><span id="sync-offset">—</span><small> ms</small></strong>
+              <span class="threshold">Safety line 8 ms</span>
+            </article>
+            <article class="signal-card counter-evidence">
+              <p>Tracking latency</p>
+              <strong><span id="tracking-latency">—</span><small> ms</small></strong>
+              <span class="threshold">Counter-evidence</span>
+            </article>
+            <article class="signal-card counter-evidence">
+              <p>Network latency</p>
+              <strong><span id="network-latency">—</span><small> ms</small></strong>
+              <span class="threshold">Counter-evidence</span>
+            </article>
+          </div>
+        </section>
+
+        <section class="panel investigation-panel" aria-labelledby="investigation-title">
+          <div class="panel-heading">
+            <div>
+              <p class="eyebrow">Gemini · Google ADK</p>
+              <h3 id="investigation-title">Investigation slate</h3>
+            </div>
+            <span class="agent-state" id="agent-state">Standing by</span>
+          </div>
+
+          <ol class="evidence-track" id="evidence-track" aria-label="Investigation progress">
+            <li data-step="telemetry"><span>01</span><div><strong>Telemetry</strong><p>Awaiting incident</p></div></li>
+            <li data-step="metrics"><span>02</span><div><strong>Prometheus</strong><p>Evidence query pending</p></div></li>
+            <li data-step="logs"><span>03</span><div><strong>Loki</strong><p>Correlation pending</p></div></li>
+            <li data-step="decision"><span>04</span><div><strong>Recommendation</strong><p>Human decision required</p></div></li>
+          </ol>
+
+          <div class="report" id="agent-report" tabindex="0" aria-live="polite">
+            <p class="empty-copy">Trigger GPU pressure to begin an evidence-grounded investigation.</p>
+          </div>
+
+          <div class="decision-gate">
+            <div>
+              <p class="utility-label">Human approval boundary</p>
+              <p id="decision-copy">No operational action can run from this console.</p>
+            </div>
+            <button class="button button-ack" id="ack-button" type="button" disabled>
+              Acknowledge recommendation
+            </button>
+          </div>
+        </section>
+      </div>
+    </main>
+
+    <footer>
+      <span>Read-only Grafana MCP</span>
+      <span>No autonomous remediation</span>
+      <a href="/docs">API documentation</a>
+    </footer>
+
+    <script src="./app.js" defer></script>
+  </body>
+</html>
