@@ -196,6 +196,9 @@ Thumbs.db
 
 # Agent CLI specific
 .persist_vector_store
+artifacts/traces/raw/
+artifacts/traces/sanitized/
+artifacts/grade_results/
 tests/load_test/.results/*.html
 tests/load_test/.results/*.csv
 .locust_env
