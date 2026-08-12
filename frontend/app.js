@@ -85,7 +85,22 @@ function renderStage(snapshot) {
 }
 
 async function requestJson(url, options = {}) {
+  const method = options.method || 'GET';
+  if (method === 'POST') {
+    let adminKey = sessionStorage.getItem('stagehand_admin_token');
+    if (!adminKey) {
+      adminKey = prompt("Enter Stagehand Admin Token:");
+      if (adminKey) {
+        sessionStorage.setItem('stagehand_admin_token', adminKey);
+      }
+    }
+    options.headers = options.headers || {};
+    options.headers['X-Stagehand-Admin-Key'] = adminKey || '';
+  }
   const response = await fetch(url, options);
+  if (response.status === 401) {
+    sessionStorage.removeItem('stagehand_admin_token');
+  }
   if (!response.ok) throw new Error(`${response.status} ${response.statusText}`);
   return response.json();
 }

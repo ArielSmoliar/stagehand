@@ -1,8 +1,13 @@
+import os
+
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from api.main import router
 from api.simulator import simulator
+
+os.environ["STAGEHAND_ADMIN_TOKEN"] = "test-secret-key"
+TEST_HEADERS = {"X-Stagehand-Admin-Key": "test-secret-key"}
 
 app = FastAPI()
 app.include_router(router)
@@ -17,7 +22,7 @@ def test_health_and_scenario_endpoints() -> None:
     health = client.get("/stage/health").json()
     assert health["status"] == "ok"
     assert health["grafana_mcp"] == "available"
-    response = client.post("/scenario/trigger/gpu-pressure")
+    response = client.post("/scenario/trigger/gpu-pressure", headers=TEST_HEADERS)
     assert response.status_code == 200
     assert response.json()["incident_id"] == "inc-1042"
     assert client.get("/stage/logs").json()[0]["event"] == "gpu_allocation_failed"
@@ -31,7 +36,7 @@ def test_trigger_publishes_incident_to_grafana_exporter(monkeypatch) -> None:
         return True
 
     monkeypatch.setattr("api.main.grafana_exporter.publish", record)
-    response = client.post("/scenario/trigger/gpu-pressure")
+    response = client.post("/scenario/trigger/gpu-pressure", headers=TEST_HEADERS)
 
     assert response.status_code == 200
     assert len(published) == 1
@@ -40,7 +45,7 @@ def test_trigger_publishes_incident_to_grafana_exporter(monkeypatch) -> None:
 
 
 def test_metrics_include_stage_context() -> None:
-    client.post("/scenario/trigger/gpu-pressure")
+    client.post("/scenario/trigger/gpu-pressure", headers=TEST_HEADERS)
     metrics = client.get("/metrics").text
 
     assert "stage_render_frame_time_ms" in metrics
@@ -64,7 +69,7 @@ def test_missing_credentials_block_investigation(monkeypatch) -> None:
         "GOOGLE_GENAI_USE_VERTEXAI",
     ):
         monkeypatch.delenv(name, raising=False)
-    client.post("/scenario/trigger/gpu-pressure")
+    client.post("/scenario/trigger/gpu-pressure", headers=TEST_HEADERS)
     response = client.get("/incidents/inc-1042/events")
 
     assert "evidence_snapshot" in response.text
@@ -73,16 +78,18 @@ def test_missing_credentials_block_investigation(monkeypatch) -> None:
 
 
 def test_failover_requires_exact_incident_bound_human_approval() -> None:
-    client.post("/scenario/trigger/gpu-pressure")
+    client.post("/scenario/trigger/gpu-pressure", headers=TEST_HEADERS)
 
     rejected = client.post(
         "/incidents/inc-1042/approve-failover",
+        headers=TEST_HEADERS,
         json={"approver": "supervisor", "confirmation": "approve"},
     )
     assert rejected.status_code == 422
 
     approved = client.post(
         "/incidents/inc-1042/approve-failover",
+        headers=TEST_HEADERS,
         json={
             "approver": "supervisor",
             "confirmation": "APPROVE SIMULATED FAILOVER",
@@ -96,6 +103,7 @@ def test_failover_requires_exact_incident_bound_human_approval() -> None:
 
     duplicate = client.post(
         "/incidents/inc-1042/approve-failover",
+        headers=TEST_HEADERS,
         json={
             "approver": "supervisor",
             "confirmation": "APPROVE SIMULATED FAILOVER",

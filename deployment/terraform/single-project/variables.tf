@@ -50,7 +50,6 @@ variable "app_sa_roles" {
     "roles/logging.logWriter",
     "roles/cloudtrace.agent",
     "roles/telemetry.metricsWriter",
-    "roles/secretmanager.secretAccessor",
     "roles/serviceusage.serviceUsageConsumer",
   ]
 }

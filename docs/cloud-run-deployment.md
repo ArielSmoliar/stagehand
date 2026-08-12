@@ -50,11 +50,12 @@ it access to Vertex AI, logging, tracing, and Secret Manager.
 
 ## 2. Add secret values
 
-Terraform creates the two Secret Manager containers:
+Terraform creates the three Secret Manager containers:
 
 ```bash
 stagehand-grafana-read-token
 stagehand-grafana-otlp-token
+stagehand-admin-token
 ```
 
 Terraform intentionally does not manage secret versions, keeping credential values out
@@ -64,15 +65,16 @@ history. Run the command, paste the token, then press Control-D:
 ```bash
 gcloud secrets versions add stagehand-grafana-read-token --data-file=-
 gcloud secrets versions add stagehand-grafana-otlp-token --data-file=-
+gcloud secrets versions add stagehand-admin-token --data-file=-
 ```
 
 The read token should be a least-privilege Grafana service-account token. The OTLP token
-should have only `metrics:write` and `logs:write` scopes.
+should have only `metrics:write` and `logs:write` scopes. The admin token is used to protect stagehand state mutations.
 
 ## 3. Preview the deployment
 
 Substitute the non-secret Grafana stack values below. The dry run must show Cloud Run,
-the `stagehand-app` service account, the two Secret Manager bindings, port 8080, and no
+the `stagehand-app` service account, the three Secret Manager bindings, port 8080, and no
 plaintext credentials.
 
 ```bash
@@ -87,7 +89,7 @@ agents-cli deploy --dry-run \
   --min-instances 0 \
   --max-instances 2 \
   --concurrency 4 \
-  --secrets "GRAFANA_SERVICE_ACCOUNT_TOKEN=stagehand-grafana-read-token:latest,GRAFANA_CLOUD_OTLP_TOKEN=stagehand-grafana-otlp-token:latest" \
+  --secrets "GRAFANA_SERVICE_ACCOUNT_TOKEN=stagehand-grafana-read-token:latest,GRAFANA_CLOUD_OTLP_TOKEN=stagehand-grafana-otlp-token:latest,STAGEHAND_ADMIN_TOKEN=stagehand-admin-token:latest" \
   --update-env-vars "GOOGLE_GENAI_USE_VERTEXAI=true,GOOGLE_CLOUD_PROJECT=${STAGEHAND_PROJECT},GOOGLE_CLOUD_LOCATION=global,GRAFANA_URL=https://YOUR_STACK.grafana.net,GRAFANA_CLOUD_OTLP_ENDPOINT=https://otlp-gateway-YOUR_REGION.grafana.net/otlp,GRAFANA_CLOUD_OTLP_USERNAME=YOUR_STACK_ID,MCP_GRAFANA_COMMAND=mcp-grafana,ENABLE_CLOUD_TELEMETRY=true"
 ```
 

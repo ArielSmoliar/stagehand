@@ -23,7 +23,7 @@ data "google_project" "project" {
   project_id = var.project_id
 }
 
-# Grant Storage Object Creator role to default compute service account
+# Grant Cloud Build Builder role to default compute service account
 resource "google_project_iam_member" "default_compute_sa_storage_object_creator" {
   project    = var.project_id
   role       = "roles/cloudbuild.builds.builder"

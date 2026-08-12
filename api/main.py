@@ -1,10 +1,11 @@
 import asyncio
+import hmac
 import json
 import os
 import shutil
 from threading import Lock, Timer
 
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, Depends, Header, HTTPException, Request
 from fastapi.responses import Response
 from prometheus_client import CONTENT_TYPE_LATEST
 from pydantic import BaseModel
@@ -23,6 +24,17 @@ _recovery_timers_lock = Lock()
 class FailoverApproval(BaseModel):
     approver: str
     confirmation: str
+
+
+async def verify_admin_key(x_stagehand_admin_key: str = Header(None)) -> None:
+    expected_token = os.getenv("STAGEHAND_ADMIN_TOKEN")
+    if not expected_token:
+        # Fail closed when missing server configuration
+        raise HTTPException(status_code=401, detail="Unauthorized")
+    if not x_stagehand_admin_key:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+    if not hmac.compare_digest(x_stagehand_admin_key, expected_token):
+        raise HTTPException(status_code=401, detail="Unauthorized")
 
 
 def _finish_recovery(incident_id: str) -> None:
@@ -63,7 +75,7 @@ async def get_stage_logs() -> list[dict[str, object]]:
     return simulator.correlated_logs()
 
 
-@router.post("/scenario/trigger/gpu-pressure")
+@router.post("/scenario/trigger/gpu-pressure", dependencies=[Depends(verify_admin_key)])
 async def trigger_gpu_pressure():
     snapshot = simulator.trigger_gpu_pressure()
     await asyncio.to_thread(
@@ -72,7 +84,7 @@ async def trigger_gpu_pressure():
     return snapshot
 
 
-@router.post("/scenario/reset")
+@router.post("/scenario/reset", dependencies=[Depends(verify_admin_key)])
 async def reset_scenario():
     with _recovery_timers_lock:
         for timer in _recovery_timers.values():
@@ -83,7 +95,7 @@ async def reset_scenario():
     return snapshot
 
 
-@router.post("/incidents/{incident_id}/approve-failover")
+@router.post("/incidents/{incident_id}/approve-failover", dependencies=[Depends(verify_admin_key)])
 async def approve_failover(incident_id: str, approval: FailoverApproval):
     if not approval.approver.strip():
         raise HTTPException(status_code=422, detail="approver is required")

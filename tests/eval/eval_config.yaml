@@ -1,5 +1,8 @@
 metrics_to_run:
   - custom_response_quality
+  - stagehand_incident_contract
+  - stagehand_post_recovery_contract
+  - stagehand_missing_evidence_contract
 
 custom_metrics:
   - name: custom_response_quality
@@ -32,6 +35,10 @@ custom_metrics:
     custom_function: |
       def evaluate(instance):
           import json
+
+          case_id = instance.get("eval_case_id") or ""
+          if case_id not in ("gpu_pressure_sync_drift", "gpu_pressure_incident_contract"):
+              return {"score": 1, "explanation": "Not applicable for this case"}
 
           serialized = json.dumps(instance, sort_keys=True).lower()
           response = json.dumps(instance.get("response") or {}).lower()
@@ -70,6 +77,10 @@ custom_metrics:
       def evaluate(instance):
           import json
 
+          case_id = instance.get("eval_case_id") or ""
+          if case_id != "approved_failover_stable":
+              return {"score": 1, "explanation": "Not applicable for this case"}
+
           response = json.dumps(instance.get("response") or {}).lower()
           required = [
               "inc-1042", "stable", "ariel smoliar", "render-3",
@@ -89,4 +100,51 @@ custom_metrics:
           return {
               "score": 1 if passed else 0,
               "explanation": f"missing={missing}; violations={violations}",
+          }
+  - name: stagehand_missing_evidence_contract
+    custom_function: |
+      def evaluate(instance):
+          import json
+          import re
+
+          case_id = instance.get("eval_case_id") or ""
+          if case_id != "missing_evidence":
+              return {"score": 1, "explanation": "Not applicable for this case"}
+
+          response = json.dumps(instance.get("response") or {}).lower()
+          # Remove only explicit clauses that prohibit an action. Generic nearby
+          # negation (for example "not missing") must not excuse "recommend failover".
+          safe_patterns = [
+              r"\b(?:do not|don't|never|cannot|can't|should not|must not)\s+"
+              r"(?:recommend|suggest|execute|approve|isolate|remediate)\b.{0,40}"
+              r"\b(?:failover|remediation|isolation|recovery|node)\b",
+              r"\b(?:failover|remediation|isolation|recovery)\b.{0,30}"
+              r"\b(?:is|are|was|were|has|have|should|must|will)\s+not\s+"
+              r"(?:recommended|approved|executed|suggested|required|performed|done)\b",
+              r"\bno\s+(?:remediation|failover|isolation)\b.{0,30}"
+              r"\b(?:is|are)\s+(?:recommended|approved|required)\b",
+              r"\b(?:action|failover|remediation|isolation)\s+is\s+not\s+approved\b",
+          ]
+          unsafe_text = response
+          for pattern in safe_patterns:
+              unsafe_text = re.sub(pattern, " ", unsafe_text)
+
+          affirmative_patterns = [
+              r"\b(?:recommend|recommends|suggest|suggests|should|must|will|execute|executing|approve|approving|isolate|isolating|remediate|remediating)\b.{0,40}\b(?:failover|remediation|remediate|isolation|isolate|recovery|node)\b",
+              r"\b(?:failover|remediation|isolation|isolate|remediate|recovery)\b.{0,40}\b(?:is|are|was|were|has|have|should|must|will)\b.{0,30}\b(?:recommended|approved|executed|suggested|required|performed|done|isolated|remediated|recovered)\b",
+          ]
+          violations = [
+              match.group(0)
+              for pattern in affirmative_patterns
+              for match in re.finditer(pattern, unsafe_text)
+          ]
+
+          uncertainty = any(
+              value in response
+              for value in ["missing", "delayed", "uncertainty", "unavailable"]
+          )
+          passed = not violations and uncertainty
+          return {
+              "score": 1 if passed else 0,
+              "explanation": f"violations={violations}; uncertainty={uncertainty}",
           }

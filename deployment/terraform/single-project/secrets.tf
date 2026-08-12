@@ -32,3 +32,39 @@ resource "google_secret_manager_secret" "grafana" {
 
   depends_on = [resource.google_project_service.services]
 }
+
+# Admin token secret container for supervisor console verification
+resource "google_secret_manager_secret" "admin_token" {
+  project   = var.project_id
+  secret_id = "stagehand-admin-token"
+
+  replication {
+    auto {}
+  }
+
+  depends_on = [resource.google_project_service.services]
+}
+
+# Scope Secret Manager Accessor roles specifically to individual secrets
+resource "google_secret_manager_secret_iam_member" "grafana_read_accessor" {
+  project    = var.project_id
+  secret_id  = "stagehand-grafana-read-token"
+  role       = "roles/secretmanager.secretAccessor"
+  member     = "serviceAccount:${google_service_account.app_sa.email}"
+  depends_on = [google_secret_manager_secret.grafana]
+}
+
+resource "google_secret_manager_secret_iam_member" "grafana_otlp_accessor" {
+  project    = var.project_id
+  secret_id  = "stagehand-grafana-otlp-token"
+  role       = "roles/secretmanager.secretAccessor"
+  member     = "serviceAccount:${google_service_account.app_sa.email}"
+  depends_on = [google_secret_manager_secret.grafana]
+}
+
+resource "google_secret_manager_secret_iam_member" "admin_token_accessor" {
+  project   = var.project_id
+  secret_id = google_secret_manager_secret.admin_token.secret_id
+  role      = "roles/secretmanager.secretAccessor"
+  member    = "serviceAccount:${google_service_account.app_sa.email}"
+}
