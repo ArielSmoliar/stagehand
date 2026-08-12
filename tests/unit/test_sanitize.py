@@ -7,10 +7,15 @@ import yaml
 from tests.eval.sanitize_traces import sanitize_file, sanitize_object, verify_sanitized
 
 
+def _token(prefix: str, payload: str) -> str:
+    """Build scanner-shaped fixtures at runtime without committing token literals."""
+    return prefix + payload
+
+
 def test_sanitize_object_removes_sensitive_keys() -> None:
     sensitive_dict = {
         "x-stagehand-admin-key": "secret_key_123",
-        "google_api_key": "AIzaSyFakeKey1234567890123456789012345",
+        "google_api_key": "synthetic-google-key",
         "public_key": "normal_public_value",
         "headers": {
             "Authorization": "Bearer some-sensitive-bearer-token",
@@ -30,13 +35,13 @@ def test_sanitize_object_removes_sensitive_keys() -> None:
 def test_sanitize_object_masks_patterns() -> None:
     sensitive_text_dict = {
         "log_message": "Failed authorization attempt with Bearer token-123456-abc",
-        "git_token": "Token is glpat-12345678901234567890",
-        "gcp_api": "AIzaSy123456789012345678901234567890123",
+        "git_token": "Token is " + _token("glpat-", "1" * 20),
+        "gcp_api": _token("AIzaSy", "1" * 33),
         "basic_auth": "Basic YWRtaW46cGFzc3dvcmQ=",
         "url_cred": "https://admin:secret123@grafana.net",
-        "grafana_sa_tok": "glsa_12345678901234567890123456789012",
-        "grafana_c_tok": "glc_12345678901234567890123456789012",
-        "grafana_punctuated_tok": "glsa_raw-grafana-secret",
+        "grafana_sa_tok": _token("glsa_", "1" * 32),
+        "grafana_c_tok": _token("glc_", "1" * 32),
+        "grafana_punctuated_tok": _token("glsa_", "raw-grafana-secret"),
         "env_assignment": "STAGEHAND_ADMIN_TOKEN=secret_key_123",
         "env_export": "export GRAFANA_SERVICE_ACCOUNT_TOKEN=secret_key_456",
     }
@@ -73,15 +78,15 @@ def test_verify_sanitized_raises_on_sensitive_patterns() -> None:
     with pytest.raises(ValueError, match="Sensitive pattern match found"):
         verify_sanitized(dirty_url)
 
-    dirty_grafana_sa = '{"token": "glsa_12345678901234567890123456789012"}'
+    dirty_grafana_sa = '{"token": "' + _token("glsa_", "1" * 32) + '"}'
     with pytest.raises(ValueError, match="Sensitive pattern match found"):
         verify_sanitized(dirty_grafana_sa)
 
-    dirty_grafana_c = '{"token": "glc_12345678901234567890123456789012"}'
+    dirty_grafana_c = '{"token": "' + _token("glc_", "1" * 32) + '"}'
     with pytest.raises(ValueError, match="Sensitive pattern match found"):
         verify_sanitized(dirty_grafana_c)
 
-    dirty_gcp = '{"message": "Key is AIzaSy123456789012345678901234567890123"}'
+    dirty_gcp = '{"message": "Key is ' + _token("AIzaSy", "1" * 33) + '"}'
     with pytest.raises(ValueError, match="Sensitive pattern match found"):
         verify_sanitized(dirty_gcp)
 
