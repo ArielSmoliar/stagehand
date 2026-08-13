@@ -15,7 +15,7 @@ import logging
 import os
 from pathlib import Path
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request, Response
 from fastapi.staticfiles import StaticFiles
 from google.adk.cli.fast_api import get_fast_api_app
 
@@ -52,6 +52,16 @@ app.mount(
     StaticFiles(directory=Path(AGENT_DIR) / "frontend", html=True),
     name="console",
 )
+
+
+@app.middleware("http")
+async def disable_console_caching(request: Request, call_next) -> Response:
+    """Prevent deployed supervisor controls from being stranded on stale assets."""
+    response = await call_next(request)
+    if request.url.path.startswith("/console"):
+        response.headers["Cache-Control"] = "no-store, max-age=0"
+        response.headers["Pragma"] = "no-cache"
+    return response
 
 
 @app.post("/feedback")
