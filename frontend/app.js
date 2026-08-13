@@ -17,6 +17,11 @@ const elements = {
   resetButton: document.querySelector("#reset-button"),
   ackButton: document.querySelector("#ack-button"),
   decisionCopy: document.querySelector("#decision-copy"),
+  adminDialog: document.querySelector("#admin-dialog"),
+  adminForm: document.querySelector("#admin-form"),
+  adminToken: document.querySelector("#admin-token"),
+  adminCancel: document.querySelector("#admin-cancel"),
+  adminDialogError: document.querySelector("#admin-dialog-error"),
 };
 
 let eventSource = null;
@@ -84,18 +89,55 @@ function renderStage(snapshot) {
     .join("");
 }
 
+function requestAdminKey() {
+  const cachedKey = sessionStorage.getItem("stagehand_admin_token");
+  if (cachedKey) return Promise.resolve(cachedKey);
+
+  return new Promise((resolve, reject) => {
+    elements.adminToken.value = "";
+    elements.adminDialogError.hidden = true;
+
+    function cleanup() {
+      elements.adminForm.removeEventListener("submit", handleSubmit);
+      elements.adminCancel.removeEventListener("click", handleCancel);
+      elements.adminDialog.removeEventListener("cancel", handleCancel);
+    }
+
+    function handleSubmit(event) {
+      event.preventDefault();
+      const adminKey = elements.adminToken.value.trim();
+      if (!adminKey) {
+        elements.adminDialogError.hidden = false;
+        elements.adminToken.focus();
+        return;
+      }
+      cleanup();
+      sessionStorage.setItem("stagehand_admin_token", adminKey);
+      elements.adminDialog.close();
+      resolve(adminKey);
+    }
+
+    function handleCancel(event) {
+      event.preventDefault();
+      cleanup();
+      elements.adminDialog.close();
+      reject(new Error("Admin authorization cancelled"));
+    }
+
+    elements.adminForm.addEventListener("submit", handleSubmit);
+    elements.adminCancel.addEventListener("click", handleCancel);
+    elements.adminDialog.addEventListener("cancel", handleCancel);
+    elements.adminDialog.showModal();
+    elements.adminToken.focus();
+  });
+}
+
 async function requestJson(url, options = {}) {
   const method = options.method || 'GET';
   if (method === 'POST') {
-    let adminKey = sessionStorage.getItem('stagehand_admin_token');
-    if (!adminKey) {
-      adminKey = prompt("Enter Stagehand Admin Token:");
-      if (adminKey) {
-        sessionStorage.setItem('stagehand_admin_token', adminKey);
-      }
-    }
+    const adminKey = await requestAdminKey();
     options.headers = options.headers || {};
-    options.headers['X-Stagehand-Admin-Key'] = adminKey || '';
+    options.headers['X-Stagehand-Admin-Key'] = adminKey;
   }
   const response = await fetch(url, options);
   if (response.status === 401) {

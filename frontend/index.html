@@ -129,6 +129,32 @@
       <a href="/docs">API documentation</a>
     </footer>
 
+    <dialog class="auth-dialog" id="admin-dialog" aria-labelledby="admin-dialog-title">
+      <form class="auth-dialog-card" id="admin-form" method="dialog">
+        <p class="eyebrow">Supervisor authorization</p>
+        <h2 id="admin-dialog-title">Authorize stage control</h2>
+        <p class="auth-dialog-copy">
+          Enter the Stagehand admin password to trigger, reset, or approve a simulated action.
+          It is retained only for this browser tab.
+        </p>
+        <label for="admin-token">Admin password</label>
+        <input
+          id="admin-token"
+          name="admin-token"
+          type="password"
+          autocomplete="current-password"
+          required
+        />
+        <p class="auth-dialog-error" id="admin-dialog-error" hidden>
+          Enter the admin password to continue.
+        </p>
+        <div class="auth-dialog-actions">
+          <button class="button button-secondary" id="admin-cancel" type="button">Cancel</button>
+          <button class="button button-primary" type="submit">Authorize action</button>
+        </div>
+      </form>
+    </dialog>
+
     <script src="./app.js" defer></script>
   </body>
 </html>

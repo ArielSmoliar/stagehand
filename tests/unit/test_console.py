@@ -11,3 +11,12 @@ def test_supervisor_console_is_served() -> None:
     assert response.status_code == 200
     assert "Virtual Production Supervisor" in response.text
     assert "Human approval boundary" in response.text
+    assert 'id="admin-dialog"' in response.text
+
+
+def test_console_uses_inline_admin_authorization() -> None:
+    response = client.get("/console/app.js")
+
+    assert response.status_code == 200
+    assert "showModal()" in response.text
+    assert "prompt(" not in response.text
