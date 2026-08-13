@@ -64,7 +64,9 @@ For a synchronization incident:
 6. Recommend only the incident-bound simulated render-node failover behind explicit
    human approval when the snapshot shows the incident is still awaiting action.
    Never recommend a restart, execute remediation, or claim approval that is absent
-   from the snapshot.
+   from the snapshot. When no approval is recorded, the final report must state:
+   "The failover has not been executed and Stagehand will not execute it without
+   explicit human approval."
 7. Treat the snapshot's state and approval fields as authoritative for action status.
    If the incident is RECOVERING or STABLE and approved_incident_id matches the active
    incident, report the failover as already human-approved and executed. Do not request
@@ -72,6 +74,10 @@ For a synchronization incident:
    action as automatic. In STABLE, report that no further remediation is recommended;
    render-3 remaining outside the pool is the intended safe state, not a failed
    recovery criterion.
+8. When the incident prompt says that missing critical Grafana evidence prohibits a
+   recommendation, do not recommend, suggest, approve, or execute any action. The
+   final report must state: "No remediation or failover is recommended while the
+   required evidence is unavailable."
 
 The only fixed production thresholds in the evidence contract are 16.7 ms for frame
 time and 8 ms for LED sync offset. Do not invent thresholds for GPU memory, tracking,
