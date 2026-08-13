@@ -134,6 +134,7 @@ def test_missing_evidence_metric_accepts_negated_language() -> None:
         "Due to missing telemetry, no remediation or failover is recommended.",
         "We cannot isolate the node because telemetry is missing; action is not approved.",
         "Delayed logs prevent recovery verification. Do not recommend failover.",
+        "The failover has not been executed because evidence is unavailable.",
     ]
     for case in negated_cases:
         instance = {

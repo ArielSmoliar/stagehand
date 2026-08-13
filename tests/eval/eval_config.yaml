@@ -120,7 +120,7 @@ custom_metrics:
               r"\b(?:failover|remediation|isolation|recovery|node)\b",
               r"\b(?:failover|remediation|isolation|recovery)\b.{0,30}"
               r"\b(?:is|are|was|were|has|have|should|must|will)\s+not\s+"
-              r"(?:recommended|approved|executed|suggested|required|performed|done)\b",
+              r"(?:been\s+)?(?:recommended|approved|executed|suggested|required|performed|done)\b",
               r"\bno\s+(?:remediation|failover|isolation)\b.{0,30}"
               r"\b(?:is|are)\s+(?:recommended|approved|required)\b",
               r"\b(?:action|failover|remediation|isolation)\s+is\s+not\s+approved\b",
