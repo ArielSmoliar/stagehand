@@ -21,6 +21,41 @@ Stagehand correlates Grafana metrics and Loki logs, checks tracking and network
 telemetry as counter-evidence, and uses Gemini through Google ADK to produce an
 incident-scoped recommendation.
 
+## The demo in one sentence
+
+**Google ADK gives Gemini controlled, read-only access to live Grafana evidence;
+Gemini diagnoses the production incident and recommends a response; a human
+supervisor authorizes the simulated failover; and Stagehand verifies recovery from
+fresh telemetry.**
+
+| Component | Role in the demo |
+|---|---|
+| **Gemini** | Reasons over live metrics and logs, tests competing hypotheses, identifies missing evidence, and recommends whether production should hold or continue. |
+| **Google ADK** | Defines and runs the agent, connects Gemini to the read-only Grafana MCP tools, manages the incident-scoped session, and streams investigation events to the console. |
+| **Grafana Cloud** | Supplies the operational evidence through Prometheus metrics and Loki logs and provides the dashboard used to verify the incident and recovery. |
+| **FastAPI + simulator** | Owns the deterministic virtual stage, incident state machine, protected control endpoints, and recovery checks. |
+| **Human supervisor** | Retains authority for remediation. Gemini can recommend isolating `render-3`, but cannot approve or execute that action. |
+
+## Google technology is on the critical path
+
+Stagehand's agentic path is Google-native from incident intake through recommendation:
+
+- **Gemini on Vertex AI** is the only language model used by the submitted runtime.
+- **Google ADK** runs the agent and exposes the Grafana MCP tools to Gemini.
+- **Google Cloud Run** hosts the combined ADK and FastAPI application.
+- **Google Cloud Secret Manager and IAM** protect runtime credentials and enforce
+  least-privilege access.
+- **Vertex AI evaluation** grades sanitized traces from the same Gemini investigation
+  contract exercised by the deployed application.
+- **Google Antigravity** was used for bounded Google-specific code review, ADK trace
+  capture, and evaluation work during development. It is a development environment,
+  not a hidden runtime dependency.
+
+Remove Gemini or Google ADK and Stagehand loses its ability to investigate Grafana
+evidence and produce the incident recommendation—the central intelligence shown in
+the demo. FastAPI deliberately retains deterministic simulation and approved control
+execution so that the model cannot silently remediate production.
+
 > Stagehand is under active development for **Agentic Cinema: The Blockbuster
 > Hackathon**, in the Grafana partner track. The deterministic simulator and local
 > API foundation, Grafana Cloud OTLP export, and read-back through the official
@@ -64,23 +99,18 @@ Supervisor console
         |
         | HTTPS + server-sent events
         v
-Cloud Run
-  FastAPI application
+Cloud Run: FastAPI + Stagehand
   ├── deterministic stage simulator
-  ├── Prometheus-compatible /metrics + OTLP exporter
-  ├── incident and scenario API
-  ├── Google ADK Runner
-  └── mcp-grafana subprocess (stdio, read-only)
-             |
-             v
-        Grafana Cloud
-        ├── Prometheus metrics
-        ├── Loki logs
-        ├── dashboards and alerts
-        └── Grafana AI Observability (planned complement)
-             |
-             v
-        Gemini on Google Cloud
+  ├── Prometheus-compatible /metrics + OTLP exporter ──────┐
+  ├── protected incident, approval, and scenario API       │
+  └── Google ADK Runner                                    │
+        ├── Gemini on Google Cloud                         │
+        └── mcp-grafana subprocess (stdio, read-only) ─────┤
+                                                           v
+                                                     Grafana Cloud
+                                                     ├── Prometheus metrics
+                                                     ├── Loki logs
+                                                     └── dashboards
 ```
 
 The submitted runtime is designed to use only Google Cloud AI tooling. Grafana MCP is
@@ -111,6 +141,22 @@ whether the evidence supports holding or continuing the take. Google ADK supplie
 agent definition, session and runner lifecycle, MCP tool integration, and streamed
 events. Cloud Run is the hosted runtime for the combined FastAPI and ADK app.
 
+## End-to-end demo flow
+
+1. The stage begins healthy at 60 fps across `render-1`, `render-2`, and `render-3`.
+2. The supervisor triggers deterministic GPU pressure on `render-3`.
+3. Stagehand exports the degraded metrics and correlated log event to Grafana Cloud.
+4. Google ADK starts Gemini's incident-scoped investigation and streams its progress.
+5. Gemini queries Grafana through the official read-only MCP server, correlates GPU
+   pressure with frame-time and LED-sync degradation, and rules out tracking and
+   network latency as likely causes.
+6. Gemini recommends isolating `render-3`, but no remediation tool is available to it.
+7. The human supervisor explicitly approves the incident-bound simulated failover.
+8. FastAPI removes `render-3` from the active rendering pool and enters recovery.
+9. Stagehand declares `STABLE` only after fresh evidence confirms that `render-1` and
+   `render-2` remain below **16.7 ms** frame time and global `led_sync_offset_ms`
+   returns below **8 ms**.
+
 ## Current status
 
 | Capability | Status |
@@ -121,7 +167,7 @@ events. Cloud Run is the hosted runtime for the combined FastAPI and ADK app.
 | FastAPI health, scenario, state, metrics, logs, and SSE routes | Working |
 | Google ADK Stagehand agent | Working locally and on Cloud Run |
 | Read-only `mcp-grafana` subprocess connection | Live connection verified |
-| Automated unit/API suite | 19 passing tests |
+| Automated unit/API suite | 31 passing, 4 skipped |
 | Live Gemini diagnosis through Grafana MCP | Verified with a bounded tool trajectory |
 | OTLP metrics and log exporter for Grafana Cloud | Live ingestion verified |
 | Prometheus and Loki read-back through official Grafana MCP | Live queries verified |
@@ -137,11 +183,13 @@ explicit human approval, Stagehand isolated `render-3`, reached `STABLE` after 1
 seconds, and Gemini correctly reported the action as already approved and executed
 with no further remediation recommended.
 
-The focused evaluation cases live in `tests/eval`. `agents-cli 0.5.0` currently fails
-before inference when converting ADK's `McpToolset` into its evaluation agent format;
-the deployed SSE investigation is therefore the behavioral verification path for the
-live MCP integration, while deterministic prompt and control-boundary behavior remains
-covered by pytest.
+The focused evaluation cases live in `tests/eval`. Because the evaluation adapter
+cannot directly convert ADK's dynamic `McpToolset`, Stagehand grades sanitized traces
+captured from verified runs instead of altering the production toolset. Across the
+final five-case suite, every deterministic safety contract scored **1.0** and Vertex
+AI's custom response-quality evaluation averaged **5/5**. The deployed SSE flow
+provides behavioral verification of the live MCP integration, while pytest covers the
+deterministic simulator, API, authorization, and control boundaries.
 
 ## Quick start
 
@@ -315,7 +363,7 @@ uv run pytest -q
 Expected current result:
 
 ```text
-19 passed, 4 skipped
+31 passed, 4 skipped
 ```
 
 The skipped tests require live Gemini or a running Stagehand service. Enable live
@@ -353,11 +401,9 @@ the complete hosted flow has passed.
 
 ## Roadmap
 
-1. Decide and implement the judge-facing access model for the private Cloud Run service.
-2. Capture Grafana dashboard screenshots and the complete hosted recovery sequence.
-3. Work around or upgrade past the `agents-cli 0.5.0` MCP evaluation limitation.
-4. Run the Antigravity/Gemini review described in the handoff document.
-5. Record the three-minute demo and prepare the Devpost submission.
+1. Confirm and capture all four recovery criteria in the hosted console and Grafana.
+2. Rehearse the judge-facing flow from healthy stage through verified recovery.
+3. Record the three-minute demo and prepare the Devpost submission.
 
 ## Repository map
 
@@ -380,9 +426,13 @@ docs/                   Deployment runbook, design constraints, and Gemini hando
 
 Stagehand is being built as a new project during the contest period. The intended
 submitted system uses Gemini, Google ADK, Google Cloud, and Grafana Cloud with the
-official Grafana MCP server at runtime. The final submission still requires a public
-hosted application, a functional three-minute demo video, and visible proof that the
-agent retrieves Grafana telemetry during the demonstrated workflow.
+official Grafana MCP server at runtime. Gemini on Vertex AI is the submitted runtime's
+only LLM; no OpenAI, Anthropic, or other model API participates in the demonstrated
+investigation. Antigravity contributed to the Google-specific development and
+evaluation workflow, while the deployed agent itself runs through Google ADK on Cloud
+Run. The final submission still requires a functional three-minute demo video and
+visible proof that Gemini retrieves Grafana telemetry during the demonstrated
+workflow.
 
 See the [official hackathon rules](https://agentic-cinema.devpost.com/rules) and
 [Grafana track resources](https://agentic-cinema.devpost.com/details/grafana-resources).
