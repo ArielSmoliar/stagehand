@@ -140,7 +140,7 @@ async function requestJson(url, options = {}) {
     options.headers['X-Stagehand-Admin-Key'] = adminKey;
   }
   const response = await fetch(url, options);
-  if (response.status === 401) {
+  if (response.status === 401 || response.status === 403) {
     sessionStorage.removeItem('stagehand_admin_token');
   }
   if (!response.ok) throw new Error(`${response.status} ${response.statusText}`);

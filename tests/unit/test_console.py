@@ -22,4 +22,5 @@ def test_console_uses_inline_admin_authorization() -> None:
     assert response.status_code == 200
     assert "showModal()" in response.text
     assert "prompt(" not in response.text
+    assert "response.status === 401 || response.status === 403" in response.text
     assert response.headers["cache-control"] == "no-store, max-age=0"
