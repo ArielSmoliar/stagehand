@@ -54,13 +54,13 @@ evidence and produce the incident recommendation—the central intelligence show
 the demo. FastAPI deliberately retains deterministic simulation and approved control
 execution so that the model cannot silently remediate production.
 
-> Stagehand is under active development for **Agentic Cinema: The Blockbuster
-> Hackathon**, in the Grafana partner track. The deterministic simulator and local
-> API foundation, Grafana Cloud OTLP export, and read-back through the official
-> Grafana MCP, the local supervisor console, and the incident-bound simulated
-> failover/recovery loop work today. The complete application is deployed as an
-> authenticated Cloud Run service and the hosted investigation, approval, and
-> recovery path has been verified end to end against fresh Grafana evidence.
+> **Stagehand is a working submission for the Grafana track of Agentic Cinema: The
+> Blockbuster Hackathon.** It simulates a virtual-production incident, exports live
+> telemetry to Grafana Cloud, and uses Gemini through Google ADK and the official
+> read-only Grafana MCP server to investigate the failure. A human supervisor must
+> approve the simulated failover before Stagehand isolates the affected render node
+> and verifies recovery. The complete workflow is deployed on Google Cloud Run and
+> has been validated end to end using fresh Prometheus metrics and Loki logs.
 
 ## Why Stagehand
 
