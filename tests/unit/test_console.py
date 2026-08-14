@@ -32,9 +32,9 @@ def test_public_judge_surface_is_read_only(monkeypatch) -> None:
     monkeypatch.setenv("STAGEHAND_ADMIN_TOKEN", "test-secret-key")
 
     assert client.get("/console/").status_code == 200
-    assert client.get("/docs").status_code == 200
-    assert client.get("/openapi.json").status_code == 200
     assert client.get("/stage/state").status_code == 200
+    assert client.get("/docs").status_code == 401
+    assert client.get("/openapi.json").status_code == 401
     assert client.get("/api/list-apps").status_code == 401
     assert client.post("/feedback", json={}).status_code == 401
 

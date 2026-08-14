@@ -57,11 +57,7 @@ app.mount(
 
 PUBLIC_GET_PATHS = {
     "/",
-    "/docs",
-    "/docs/oauth2-redirect",
     "/health",
-    "/openapi.json",
-    "/redoc",
     "/stage/health",
     "/stage/state",
     "/stage/logs",

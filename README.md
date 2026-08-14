@@ -271,8 +271,6 @@ tile in Grafana Cloud. If those three values are absent, Stagehand remains fully
 locally and the exporter safely becomes a no-op. See Grafana's
 [OTLP ingestion documentation](https://grafana.com/docs/grafana-cloud/send-data/otlp/send-data-otlp/).
 
-Open `http://127.0.0.1:8000/docs` for the generated API documentation.
-
 ### Run the deterministic incident
 
 Check the healthy state:
