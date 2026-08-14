@@ -1,0 +1,34 @@
+flowchart TD
+    Supervisor["Human supervisor"]
+
+    subgraph CloudRun["Google Cloud Run · Stagehand"]
+        Console["Supervisor console"]
+        API["FastAPI control boundary"]
+        Simulator["Virtual-stage simulator"]
+        ADK["Google ADK runner"]
+        Gemini["Gemini on Vertex AI"]
+        MCP["Grafana MCP · read-only"]
+        Exporter["OTLP telemetry exporter"]
+    end
+
+    subgraph Grafana["Grafana Cloud"]
+        Prometheus["Prometheus metrics"]
+        Loki["Loki logs"]
+        Dashboard["Stage dashboard"]
+    end
+
+    Supervisor -->|"trigger incident"| Console
+    Console --> API
+    API --> Simulator
+    Simulator -->|"metrics, logs, traces"| Exporter
+    Exporter --> Grafana
+    API -->|"incident-scoped run"| ADK
+    ADK --> Gemini
+    Gemini -->|"choose evidence queries"| MCP
+    MCP -->|"PromQL and LogQL"| Grafana
+    Grafana -->|"live evidence"| MCP
+    Gemini -->|"diagnosis and recommendation"| Console
+    Supervisor -->|"explicit approval"| API
+    API -->|"simulated failover"| Simulator
+    Prometheus --> Dashboard
+    Loki --> Dashboard

@@ -60,7 +60,7 @@ execution so that the model cannot silently remediate production.
 > Grafana MCP, the local supervisor console, and the incident-bound simulated
 > failover/recovery loop work today. The complete application is deployed as an
 > authenticated Cloud Run service and the hosted investigation, approval, and
-> recovery path has been verified against live Grafana evidence.
+> recovery path has been verified end to end against fresh Grafana evidence.
 
 ## Why Stagehand
 
@@ -92,24 +92,46 @@ preserves the incident, stage, scene, and take identifiers.
 
 ## Architecture
 
-```text
-Supervisor console
-        |
-        | HTTPS + server-sent events
-        v
-Cloud Run: FastAPI + Stagehand
-  ├── deterministic stage simulator
-  ├── Prometheus-compatible /metrics + OTLP exporter ──────┐
-  ├── protected incident, approval, and scenario API       │
-  └── Google ADK Runner                                    │
-        ├── Gemini on Google Cloud                         │
-        └── mcp-grafana subprocess (stdio, read-only) ─────┤
-                                                           v
-                                                     Grafana Cloud
-                                                     ├── Prometheus metrics
-                                                     ├── Loki logs
-                                                     └── dashboards
+```mermaid
+flowchart TD
+    Supervisor["Human supervisor"]
+
+    subgraph CloudRun["Google Cloud Run · Stagehand"]
+        Console["Supervisor console"]
+        API["FastAPI control boundary"]
+        Simulator["Virtual-stage simulator"]
+        ADK["Google ADK runner"]
+        Gemini["Gemini on Vertex AI"]
+        MCP["Grafana MCP · read-only"]
+        Exporter["OTLP telemetry exporter"]
+    end
+
+    subgraph Grafana["Grafana Cloud"]
+        Prometheus["Prometheus metrics"]
+        Loki["Loki logs"]
+        Dashboard["Stage dashboard"]
+    end
+
+    Supervisor -->|"trigger incident"| Console
+    Console --> API
+    API --> Simulator
+    Simulator -->|"metrics, logs, traces"| Exporter
+    Exporter --> Grafana
+    API -->|"incident-scoped run"| ADK
+    ADK --> Gemini
+    Gemini -->|"choose evidence queries"| MCP
+    MCP -->|"PromQL and LogQL"| Grafana
+    Grafana -->|"live evidence"| MCP
+    Gemini -->|"diagnosis and recommendation"| Console
+    Supervisor -->|"explicit approval"| API
+    API -->|"simulated failover"| Simulator
+    Prometheus --> Dashboard
+    Loki --> Dashboard
 ```
+
+The two paths are deliberately separate: telemetry flows from the simulator to
+Grafana, while Gemini receives only read-only query tools. Remediation flows through
+the protected FastAPI boundary and requires explicit human approval.
 
 The submitted runtime is designed to use only Google Cloud AI tooling. Grafana MCP is
 launched with `--disable-write`; the agent can investigate and recommend but cannot
@@ -173,6 +195,8 @@ events. Cloud Run is the hosted runtime for the combined FastAPI and ADK app.
 | Virtual-production supervisor console | Working locally and on Cloud Run |
 | Incident-bound human approval | Hosted flow verified; stale and duplicate approvals rejected |
 | Simulated failover and 15-second recovery verification | Hosted flow verified |
+| Fresh OTLP metrics, logs, and traces | Live export verified without authentication failures |
+| End-to-end judge demo | Complete on Cloud Run with live Grafana evidence |
 
 The August 11 hosted smoke test used Gemini through Google ADK. Gemini issued the
 bounded Prometheus and Loki queries, evaluated tracking and network counter-evidence,
@@ -180,6 +204,16 @@ and returned an incident-scoped recommendation without executing remediation. Af
 explicit human approval, Stagehand isolated `render-3`, reached `STABLE` after 15
 seconds, and Gemini correctly reported the action as already approved and executed
 with no further remediation recommended.
+
+The final end-to-end verification on August 13 ran on Cloud Run revision
+`stagehand-00014-n82`. Stagehand exported fresh incident telemetry to Grafana;
+Gemini retrieved Prometheus and Loki evidence through Google ADK and the official
+read-only Grafana MCP server; and the agent attributed the failure to GPU memory
+exhaustion on `render-3` while ruling out tracking and network causes. After explicit
+approval by Ariel Smoliar, FastAPI isolated `render-3`. The final state was `STABLE`:
+`render-1` and `render-2` measured 12.3 ms and 12.5 ms, LED sync returned to 2.6 ms,
+and Gemini recommended no further remediation. A revision-scoped Cloud Run audit found
+no telemetry export failures.
 
 The focused evaluation cases live in `tests/eval`. Because the evaluation adapter
 cannot directly convert ADK's dynamic `McpToolset`, Stagehand grades sanitized traces
@@ -399,7 +433,7 @@ the complete hosted flow has passed.
 
 ## Roadmap
 
-1. Confirm and capture all four recovery criteria in the hosted console and Grafana.
+1. Capture the completed hosted recovery sequence in the console and Grafana dashboard.
 2. Rehearse the judge-facing flow from healthy stage through verified recovery.
 3. Record the three-minute demo and prepare the Devpost submission.
 
