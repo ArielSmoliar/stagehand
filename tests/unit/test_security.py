@@ -35,7 +35,9 @@ def test_incorrect_header(monkeypatch) -> None:
 def test_valid_header(monkeypatch) -> None:
     monkeypatch.setenv("STAGEHAND_ADMIN_TOKEN", TEST_ADMIN_TOKEN)
     # Mock publish to Grafana exporter to avoid network calls during unit tests
-    monkeypatch.setattr("api.main.grafana_exporter.publish", lambda *args, **kwargs: True)
+    monkeypatch.setattr(
+        "api.main.grafana_exporter.publish", lambda *args, **kwargs: True
+    )
 
     response = client.post(
         "/scenario/trigger/gpu-pressure",
@@ -56,9 +58,17 @@ def test_missing_server_config(monkeypatch) -> None:
     assert response.json()["detail"] == "Unauthorized"
 
 
+def test_investigation_stream_requires_admin_header(monkeypatch) -> None:
+    monkeypatch.setenv("STAGEHAND_ADMIN_TOKEN", TEST_ADMIN_TOKEN)
+    response = client.get("/incidents/inc-1042/events")
+    assert response.status_code == 401
+
+
 def test_stale_incident(monkeypatch) -> None:
     monkeypatch.setenv("STAGEHAND_ADMIN_TOKEN", TEST_ADMIN_TOKEN)
-    monkeypatch.setattr("api.main.grafana_exporter.publish", lambda *args, **kwargs: True)
+    monkeypatch.setattr(
+        "api.main.grafana_exporter.publish", lambda *args, **kwargs: True
+    )
 
     # First, trigger scenario to generate incident inc-1042
     client.post(
@@ -81,7 +91,9 @@ def test_stale_incident(monkeypatch) -> None:
 
 def test_duplicate_approval(monkeypatch) -> None:
     monkeypatch.setenv("STAGEHAND_ADMIN_TOKEN", TEST_ADMIN_TOKEN)
-    monkeypatch.setattr("api.main.grafana_exporter.publish", lambda *args, **kwargs: True)
+    monkeypatch.setattr(
+        "api.main.grafana_exporter.publish", lambda *args, **kwargs: True
+    )
 
     # 1. Trigger the pressure scenario
     client.post(

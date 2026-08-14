@@ -7,7 +7,8 @@ service.
 
 Do not put credentials in `.env`, deploy flags, Terraform variables, source files, or
 GitHub Actions variables. Do not make the service public until the authenticated
-deployment has passed the verification steps below.
+deployment has passed the verification steps below and the default-deny application
+boundary has been tested.
 
 ## Verified deployment
 
@@ -120,9 +121,43 @@ Then run the judge-facing flow in the authenticated console:
 5. Confirm the stage reaches `STABLE` after 15 seconds.
 6. Confirm the new incident and recovery telemetry appear in Grafana Cloud.
 
-## 6. Public demo decision
+## 6. Public judge deployment
 
-Making the Cloud Run service unauthenticated is a separate, external security decision.
-If a public judge URL is required, enable public invocation only after the authenticated
-flow passes, keep every Grafana tool read-only, retain the incident-bound approval gate,
-and remove public access immediately after judging.
+Cloud Run authentication and Stagehand authorization serve different purposes. A judge
+URL requires unauthenticated Cloud Run invocation, but the application still permits
+only these read-only routes without an operator credential:
+
+- `/console/` and its static assets;
+- `/health` and `/stage/health`;
+- `/stage/state`, `/stage/logs`, and `/metrics`.
+
+All state changes, the Gemini investigation stream, feedback, and the Google ADK run,
+session, and developer endpoints fail closed unless the request supplies the
+`X-Stagehand-Admin-Key` header. The browser stores the key only in `sessionStorage` and
+sends it as a header; it is never placed in a URL, cookie, source file, or server log.
+
+After deploying and verifying the protected revision, grant public invocation:
+
+```bash
+gcloud run services add-iam-policy-binding stagehand \
+  --project "$STAGEHAND_PROJECT" \
+  --region "$STAGEHAND_REGION" \
+  --member="allUsers" \
+  --role="roles/run.invoker"
+```
+
+Verify the boundary from a signed-out browser or an incognito window. Public GETs must
+return `200`; protected endpoints without the key must return `401`; and the complete
+console flow must work only after entering the privately supplied judge access key.
+Do not publish that key in Devpost prose, GitHub, screenshots, URLs, or the demo video.
+Share it through a private judging-instructions channel or directly with the organizers.
+
+Remove public invocation after judging:
+
+```bash
+gcloud run services remove-iam-policy-binding stagehand \
+  --project "$STAGEHAND_PROJECT" \
+  --region "$STAGEHAND_REGION" \
+  --member="allUsers" \
+  --role="roles/run.invoker"
+```

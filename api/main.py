@@ -27,14 +27,16 @@ class FailoverApproval(BaseModel):
 
 
 async def verify_admin_key(x_stagehand_admin_key: str = Header(None)) -> None:
+    if not admin_key_is_valid(x_stagehand_admin_key):
+        raise HTTPException(status_code=401, detail="Unauthorized")
+
+
+def admin_key_is_valid(candidate: str | None) -> bool:
+    """Validate the operator credential without exposing comparison timing."""
     expected_token = os.getenv("STAGEHAND_ADMIN_TOKEN")
-    if not expected_token:
-        # Fail closed when missing server configuration
-        raise HTTPException(status_code=401, detail="Unauthorized")
-    if not x_stagehand_admin_key:
-        raise HTTPException(status_code=401, detail="Unauthorized")
-    if not hmac.compare_digest(x_stagehand_admin_key, expected_token):
-        raise HTTPException(status_code=401, detail="Unauthorized")
+    if not expected_token or not candidate:
+        return False
+    return hmac.compare_digest(candidate, expected_token)
 
 
 def _finish_recovery(incident_id: str) -> None:
@@ -95,7 +97,10 @@ async def reset_scenario():
     return snapshot
 
 
-@router.post("/incidents/{incident_id}/approve-failover", dependencies=[Depends(verify_admin_key)])
+@router.post(
+    "/incidents/{incident_id}/approve-failover",
+    dependencies=[Depends(verify_admin_key)],
+)
 async def approve_failover(incident_id: str, approval: FailoverApproval):
     if not approval.approver.strip():
         raise HTTPException(status_code=422, detail="approver is required")
@@ -125,7 +130,7 @@ async def approve_failover(incident_id: str, approval: FailoverApproval):
     }
 
 
-@router.get("/incidents/{incident_id}/events")
+@router.get("/incidents/{incident_id}/events", dependencies=[Depends(verify_admin_key)])
 async def incident_events(incident_id: str, request: Request) -> EventSourceResponse:
     async def event_generator():
         snapshot = simulator.get_state()

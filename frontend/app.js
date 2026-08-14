@@ -24,7 +24,7 @@ const elements = {
   adminDialogError: document.querySelector("#admin-dialog-error"),
 };
 
-let eventSource = null;
+let investigationAbortController = null;
 let recoveryPoll = null;
 
 function updateClock() {
@@ -45,9 +45,9 @@ function setStep(step, state, detail) {
 }
 
 function resetInvestigation() {
-  if (eventSource) eventSource.close();
+  if (investigationAbortController) investigationAbortController.abort();
   if (recoveryPoll) clearInterval(recoveryPoll);
-  eventSource = null;
+  investigationAbortController = null;
   recoveryPoll = null;
   elements.agentState.textContent = "Standing by";
   elements.agentReport.className = "report";
@@ -153,47 +153,82 @@ function appendReport(text) {
   elements.agentReport.scrollTop = elements.agentReport.scrollHeight;
 }
 
-function startInvestigation(incidentId) {
-  if (eventSource) eventSource.close();
+async function startInvestigation(incidentId) {
+  if (investigationAbortController) investigationAbortController.abort();
+  investigationAbortController = new AbortController();
   elements.agentState.textContent = "Investigating";
   elements.agentReport.textContent = "";
   setStep("telemetry", "active", "Incident scoped");
 
-  eventSource = new EventSource(`/incidents/${incidentId}/events`);
-  eventSource.addEventListener("investigation_started", () => {
-    setStep("telemetry", "complete", "Incident scoped");
-    setStep("metrics", "active", "Querying Grafana");
-  });
-  eventSource.addEventListener("evidence_snapshot", () => {
-    setStep("metrics", "complete", "Evidence captured");
-    setStep("logs", "active", "Correlating event");
-  });
-  eventSource.addEventListener("agent_update", (event) => {
-    const payload = JSON.parse(event.data);
-    appendReport(payload.text);
-    setStep("logs", "complete", "Correlation checked");
-    setStep("decision", "active", "Drafting recommendation");
-    elements.agentState.textContent = "Recommendation ready";
-    elements.ackButton.disabled = false;
-    setStep("decision", "complete", "Human review required");
-  });
-  eventSource.addEventListener("investigation_blocked", (event) => {
-    const payload = JSON.parse(event.data);
-    elements.agentState.textContent = "Configuration needed";
-    elements.agentReport.classList.add("is-failed");
-    appendReport(`Investigation blocked: ${payload.reason}`);
-    eventSource.close();
-  });
-  eventSource.addEventListener("investigation_failed", (event) => {
-    const payload = JSON.parse(event.data);
-    elements.agentState.textContent = "Investigation failed";
-    elements.agentReport.classList.add("is-failed");
-    appendReport(`Investigation failed (${payload.error_type}). Check service logs and retry.`);
-    eventSource.close();
-  });
-  eventSource.onerror = () => {
-    if (elements.agentState.textContent === "Recommendation ready") eventSource.close();
-  };
+  function handleInvestigationEvent(eventName, data) {
+    if (eventName === "investigation_started") {
+      setStep("telemetry", "complete", "Incident scoped");
+      setStep("metrics", "active", "Querying Grafana");
+    } else if (eventName === "evidence_snapshot") {
+      setStep("metrics", "complete", "Evidence captured");
+      setStep("logs", "active", "Correlating event");
+    } else if (eventName === "agent_update") {
+      const payload = JSON.parse(data);
+      appendReport(payload.text);
+      setStep("logs", "complete", "Correlation checked");
+      setStep("decision", "active", "Drafting recommendation");
+      elements.agentState.textContent = "Recommendation ready";
+      elements.ackButton.disabled = false;
+      setStep("decision", "complete", "Human review required");
+    } else if (eventName === "investigation_blocked") {
+      const payload = JSON.parse(data);
+      elements.agentState.textContent = "Configuration needed";
+      elements.agentReport.classList.add("is-failed");
+      appendReport(`Investigation blocked: ${payload.reason}`);
+      investigationAbortController.abort();
+    } else if (eventName === "investigation_failed") {
+      const payload = JSON.parse(data);
+      elements.agentState.textContent = "Investigation failed";
+      elements.agentReport.classList.add("is-failed");
+      appendReport(`Investigation failed (${payload.error_type}). Check service logs and retry.`);
+      investigationAbortController.abort();
+    }
+  }
+
+  try {
+    const adminKey = await requestAdminKey();
+    const response = await fetch(`/incidents/${incidentId}/events`, {
+      headers: { "X-Stagehand-Admin-Key": adminKey },
+      signal: investigationAbortController.signal,
+    });
+    if (response.status === 401 || response.status === 403) {
+      sessionStorage.removeItem("stagehand_admin_token");
+    }
+    if (!response.ok || !response.body) {
+      throw new Error(`${response.status} ${response.statusText}`);
+    }
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = "";
+    while (true) {
+      const { value, done } = await reader.read();
+      buffer += decoder.decode(value || new Uint8Array(), { stream: !done });
+      const frames = buffer.split("\n\n");
+      buffer = frames.pop() || "";
+      for (const frame of frames) {
+        let eventName = "message";
+        const dataLines = [];
+        for (const line of frame.split("\n")) {
+          if (line.startsWith("event: ")) eventName = line.slice(7);
+          if (line.startsWith("data: ")) dataLines.push(line.slice(6));
+        }
+        handleInvestigationEvent(eventName, dataLines.join("\n"));
+      }
+      if (done) break;
+    }
+  } catch (error) {
+    if (error.name !== "AbortError") {
+      elements.agentState.textContent = "Investigation failed";
+      elements.agentReport.classList.add("is-failed");
+      appendReport(`Investigation failed: ${error.message}`);
+    }
+  }
 }
 
 elements.triggerButton.addEventListener("click", async () => {
@@ -202,7 +237,7 @@ elements.triggerButton.addEventListener("click", async () => {
   try {
     const snapshot = await requestJson("/scenario/trigger/gpu-pressure", { method: "POST" });
     renderStage(snapshot);
-    startInvestigation(snapshot.incident_id);
+    await startInvestigation(snapshot.incident_id);
   } catch (error) {
     elements.agentState.textContent = "Trigger failed";
     elements.agentReport.classList.add("is-failed");

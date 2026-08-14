@@ -20,6 +20,7 @@ from fastapi.staticfiles import StaticFiles
 from google.adk.cli.fast_api import get_fast_api_app
 
 from agent.app_utils.typing import Feedback
+from api.main import admin_key_is_valid
 from api.main import router as stagehand_router
 
 logger = logging.getLogger(__name__)
@@ -52,6 +53,33 @@ app.mount(
     StaticFiles(directory=Path(AGENT_DIR) / "frontend", html=True),
     name="console",
 )
+
+
+PUBLIC_GET_PATHS = {
+    "/",
+    "/health",
+    "/stage/health",
+    "/stage/state",
+    "/stage/logs",
+    "/metrics",
+}
+
+
+def _is_public_judge_request(request: Request) -> bool:
+    """Allow only the read-only judge surface through Cloud Run's public edge."""
+    return request.method == "GET" and (
+        request.url.path in PUBLIC_GET_PATHS or request.url.path.startswith("/console")
+    )
+
+
+@app.middleware("http")
+async def protect_agent_runtime(request: Request, call_next) -> Response:
+    """Fail closed around ADK, Gemini, feedback, and state-changing routes."""
+    if not _is_public_judge_request(request) and not admin_key_is_valid(
+        request.headers.get("X-Stagehand-Admin-Key")
+    ):
+        return Response(status_code=401, content="Unauthorized")
+    return await call_next(request)
 
 
 @app.middleware("http")

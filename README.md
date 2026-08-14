@@ -261,6 +261,7 @@ MCP_GRAFANA_COMMAND=mcp-grafana
 GRAFANA_CLOUD_OTLP_ENDPOINT=https://otlp-gateway-your-region.grafana.net/otlp
 GRAFANA_CLOUD_OTLP_USERNAME=your-stack-instance-id
 GRAFANA_CLOUD_OTLP_TOKEN=your-write-only-access-policy-token
+STAGEHAND_ADMIN_TOKEN=generate-a-long-random-operator-token
 ```
 
 The MCP service-account token is read-only and is used by the agent to investigate.
@@ -283,7 +284,9 @@ curl http://127.0.0.1:8000/stage/state
 Trigger GPU pressure and synchronization drift:
 
 ```bash
-curl -X POST http://127.0.0.1:8000/scenario/trigger/gpu-pressure
+curl -X POST \
+  -H "X-Stagehand-Admin-Key: $STAGEHAND_ADMIN_TOKEN" \
+  http://127.0.0.1:8000/scenario/trigger/gpu-pressure
 ```
 
 Inspect the correlated log and Prometheus metrics:
@@ -296,13 +299,17 @@ curl http://127.0.0.1:8000/metrics
 Stream the incident timeline:
 
 ```bash
-curl -N http://127.0.0.1:8000/incidents/inc-1042/events
+curl -N \
+  -H "X-Stagehand-Admin-Key: $STAGEHAND_ADMIN_TOKEN" \
+  http://127.0.0.1:8000/incidents/inc-1042/events
 ```
 
 Reset the stage:
 
 ```bash
-curl -X POST http://127.0.0.1:8000/scenario/reset
+curl -X POST \
+  -H "X-Stagehand-Admin-Key: $STAGEHAND_ADMIN_TOKEN" \
+  http://127.0.0.1:8000/scenario/reset
 ```
 
 ## API reference
@@ -318,6 +325,10 @@ curl -X POST http://127.0.0.1:8000/scenario/reset
 | `GET` | `/incidents/{incident_id}/events` | Stream evidence and ADK updates over SSE |
 
 The Google ADK development server also exposes its standard session and run endpoints.
+In a public judge deployment those endpoints, the Gemini investigation stream, and all
+state-changing routes require `X-Stagehand-Admin-Key`. The console and read-only stage
+snapshot remain publicly viewable. Provide the judge access key privately; never put it
+in the repository, hosted page, URL, screenshots, or demo video.
 
 ## Telemetry contract
 

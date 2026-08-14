@@ -55,7 +55,7 @@ def test_metrics_include_stage_context() -> None:
 
 
 def test_unknown_incident_stream_does_not_fabricate_diagnosis() -> None:
-    response = client.get("/incidents/missing/events")
+    response = client.get("/incidents/missing/events", headers=TEST_HEADERS)
     assert response.status_code == 200
     assert "incident_not_found" in response.text
 
@@ -70,7 +70,7 @@ def test_missing_credentials_block_investigation(monkeypatch) -> None:
     ):
         monkeypatch.delenv(name, raising=False)
     client.post("/scenario/trigger/gpu-pressure", headers=TEST_HEADERS)
-    response = client.get("/incidents/inc-1042/events")
+    response = client.get("/incidents/inc-1042/events", headers=TEST_HEADERS)
 
     assert "evidence_snapshot" in response.text
     assert "investigation_blocked" in response.text
