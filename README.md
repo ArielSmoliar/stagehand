@@ -2,6 +2,13 @@
 
 ![Stagehand supervising an LED-volume production incident from the virtual-production control surface](docs/assets/stagehand-hero.png)
 
+## Live demo
+
+[**Open the Stagehand virtual-production supervisor →**](https://stagehand-569619283709.us-east1.run.app/console/)
+
+The judge-facing Cloud Run console and its read-only stage telemetry are public. Scenario
+controls and Gemini investigations require a privately supplied judge access key.
+
 An **LED volume** is a film-production stage surrounded by large LED displays that show
 a real-time virtual environment in camera, replacing much of the work traditionally done
 with a green screen.
@@ -191,7 +198,7 @@ events. Cloud Run is the hosted runtime for the combined FastAPI and ADK app.
 | Live Gemini diagnosis through Grafana MCP | Verified with a bounded tool trajectory |
 | OTLP metrics and log exporter for Grafana Cloud | Live ingestion verified |
 | Prometheus and Loki read-back through official Grafana MCP | Live queries verified |
-| Cloud Run deployment | Private revision deployed and serving 100% of traffic |
+| Cloud Run deployment | Public judge console deployed; protected controls serving 100% of traffic |
 | Virtual-production supervisor console | Working locally and on Cloud Run |
 | Incident-bound human approval | Hosted flow verified; stale and duplicate approvals rejected |
 | Simulated failover and 15-second recovery verification | Hosted flow verified |
@@ -244,8 +251,10 @@ uv run uvicorn agent.fast_api_app:app --host 127.0.0.1 --port 8000
 
 Add credentials to `.env`. Never commit that file.
 
-Open [http://127.0.0.1:8000/console/](http://127.0.0.1:8000/console/) to operate
-the virtual-production supervisor console. Triggering GPU pressure starts the
+After the local server starts, open
+[http://127.0.0.1:8000/console/](http://127.0.0.1:8000/console/). This address is
+only for local development; use the [hosted demo](https://stagehand-569619283709.us-east1.run.app/console/)
+when reviewing the deployed project. Triggering GPU pressure starts the
 incident-scoped Gemini investigation and streams its evidence-backed recommendation
 into the investigation slate. Only after that recommendation is ready can the supervisor
 approve an incident-bound simulated failover. Stagehand isolates `render-3`, waits 15
@@ -421,9 +430,10 @@ than brittle string-matching unit tests.
 
 ## Cloud Run deployment
 
-The repository includes Google Agents CLI Cloud Run scaffolding. The application is
-deployed privately in `stagehand-agentic-cinema` / `us-east1`; future deployments
-remain explicit operator actions. Follow the
+The repository includes Google Agents CLI Cloud Run scaffolding. The application has a
+public, read-only judge surface in `stagehand-agentic-cinema` / `us-east1`; mutations,
+Gemini investigations, and Google ADK endpoints remain protected by the application
+authorization boundary. Future deployments remain explicit operator actions. Follow the
 [Cloud Run deployment runbook](docs/cloud-run-deployment.md) for the least-privilege
 service account, Secret Manager bindings, dry run, and end-to-end verification gate.
 
