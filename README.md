@@ -76,6 +76,11 @@ can appear as LED-wall sync drift, camera-tracking trouble, network congestion, 
 render-node failure. Operators should not have to translate several dashboards and log
 queries while a crew waits.
 
+Stagehand draws on my experience working in observability at Sumo Logic and
+AppDynamics. That background shaped its evidence-first investigation model: correlate
+metrics and logs, test competing hypotheses, state uncertainty, and keep remediation
+behind an explicit human decision.
+
 Stagehand is intentionally not a general-purpose SRE chatbot. It investigates one
 active production incident with bounded evidence queries, preserves stage context, and
 does not execute remediation without a separate human approval boundary.
